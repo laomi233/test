@@ -1,0 +1,303 @@
+<!-- =============================================================================
+     HSI INDEX CARD COMPONENT
+     apps/hsi/components/content/indexcard/indexcard.html
+     ============================================================================= -->
+<div class="hsi-index-card ${model.displayType}" 
+     data-sly-use.model="com.hsi.aem.core.models.IndexCardModel"
+     data-index-code="${model.indexCode}"
+     data-refresh-interval="${model.refreshInterval}"
+     data-real-time="${model.realTimeUpdate}">
+    
+    <!-- Card Header -->
+    <div class="index-card-header">
+        <div class="index-info">
+            <h3 class="index-name">${model.indexName}</h3>
+            <span class="index-code">${model.indexCode}</span>
+        </div>
+        <div class="index-status" data-status="${model.indexData.status}">
+            <span class="status-indicator"></span>
+            <span class="status-text">${model.indexData.status}</span>
+        </div>
+    </div>
+    
+    <!-- Current Value Display -->
+    <div class="index-values">
+        <div class="current-value">
+            <span class="value" data-field="currentValue">
+                ${model.indexData.currentValue @ format='#,##0.00'}
+            </span>
+        </div>
+        
+        <div class="change-indicators ${model.indexData.changeDirection}">
+            <span class="change" data-field="change">
+                <sly data-sly-test="${model.indexData.change >= 0}">+</sly>
+                ${model.indexData.change @ format='#,##0.00'}
+            </span>
+            <span class="change-percent" data-field="changePercent">
+                (<sly data-sly-test="${model.indexData.changePercent >= 0}">+</sly>
+                ${model.indexData.changePercent @ format='#,##0.00'}%)
+            </span>
+        </div>
+    </div>
+    
+    <!-- Additional Data (High/Low/Volume) -->
+    <div class="index-details" data-sly-test="${model.displayType == 'detailed'}">
+        <div class="detail-row">
+            <span class="label">High:</span>
+            <span class="value" data-field="high">${model.indexData.high @ format='#,##0.00'}</span>
+        </div>
+        <div class="detail-row">
+            <span class="label">Low:</span>
+            <span class="value" data-field="low">${model.indexData.low @ format='#,##0.00'}</span>
+        </div>
+        <div class="detail-row" data-sly-test="${model.indexData.volume}">
+            <span class="label">Volume:</span>
+            <span class="value" data-field="volume">${model.indexData.volume @ format='#,###'}</span>
+        </div>
+    </div>
+    
+    <!-- Embedded Chart -->
+    <div class="chart-container" data-sly-test="${model.showChart}">
+        <div class="mini-chart" 
+             data-index-code="${model.indexCode}"
+             data-chart-height="${model.chartHeight}"
+             data-chart-data="${model.indexDataJson}">
+        </div>
+    </div>
+    
+    <!-- Last Update Time -->
+    <div class="last-update">
+        <small>Last updated: <span data-field="lastUpdate" data-sly-test="${model.indexData.lastUpdate}">
+            ${model.indexData.lastUpdate @ format='dd MMM yyyy HH:mm:ss'}
+        </span></small>
+    </div>
+</div>
+
+<!-- =============================================================================
+     HSI MARKET DATA COMPONENT
+     apps/hsi/components/content/marketdata/marketdata.html
+     ============================================================================= -->
+<div class="hsi-market-data ${model.viewType}" 
+     data-sly-use.model="com.hsi.aem.core.models.MarketDataModel">
+    
+    <div class="market-data-header">
+        <h2>Market Summary</h2>
+        <div class="view-controls">
+            <select class="sort-selector" data-current-sort="${model.sortBy}">
+                <option value="name">Sort by Name</option>
+                <option value="value">Sort by Value</option>
+                <option value="change">Sort by Change</option>
+                <option value="volume">Sort by Volume</option>
+            </select>
+        </div>
+    </div>
+    
+    <!-- Summary View -->
+    <div class="market-summary" data-sly-test="${model.viewType == 'summary'}">
+        <div class="summary-grid">
+            <div class="summary-item" data-sly-repeat.item="${model.marketData}">
+                <div class="item-header">
+                    <span class="index-name">${item.indexName}</span>
+                    <span class="index-code">${item.indexCode}</span>
+                </div>
+                <div class="item-value ${item.changeDirection}">
+                    <span class="current-value">${item.currentValue @ format='#,##0.00'}</span>
+                    <span class="change">
+                        <sly data-sly-test="${item.change >= 0}">+</sly>
+                        ${item.change @ format='#,##0.00'} (${item.changePercent @ format='#,##0.00'}%)
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Detailed Table View -->
+    <div class="market-table" data-sly-test="${model.viewType == 'detailed'}">
+        <table class="responsive-table">
+            <thead>
+                <tr>
+                    <th>Index</th>
+                    <th>Current</th>
+                    <th>Change</th>
+                    <th>Change %</th>
+                    <th data-sly-test="${model.showPerformance}">High</th>
+                    <th data-sly-test="${model.showPerformance}">Low</th>
+                    <th>Volume</th>
+                    <th>Updated</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr data-sly-repeat.item="${model.marketData}" class="${item.changeDirection}">
+                    <td class="index-cell">
+                        <div class="index-info">
+                            <span class="index-name">${item.indexName}</span>
+                            <small class="index-code">${item.indexCode}</small>
+                        </div>
+                    </td>
+                    <td class="value-cell">${item.currentValue @ format='#,##0.00'}</td>
+                    <td class="change-cell ${item.changeDirection}">
+                        <sly data-sly-test="${item.change >= 0}">+</sly>
+                        ${item.change @ format='#,##0.00'}
+                    </td>
+                    <td class="percent-cell ${item.changeDirection}">
+                        <sly data-sly-test="${item.changePercent >= 0}">+</sly>
+                        ${item.changePercent @ format='#,##0.00'}%
+                    </td>
+                    <td data-sly-test="${model.showPerformance}" class="high-cell">
+                        ${item.high @ format='#,##0.00'}
+                    </td>
+                    <td data-sly-test="${model.showPerformance}" class="low-cell">
+                        ${item.low @ format='#,##0.00'}
+                    </td>
+                    <td class="volume-cell">${item.volume @ format='#,###'}</td>
+                    <td class="time-cell">
+                        <small>${item.lastUpdate @ format='HH:mm:ss'}</small>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- =============================================================================
+     HSI NEWS LIST COMPONENT
+     apps/hsi/components/content/newslist/newslist.html
+     ============================================================================= -->
+<div class="hsi-news-list" data-sly-use.model="com.hsi.aem.core.models.NewsListModel">
+    
+    <div class="news-header">
+        <h2>Latest News</h2>
+        <div class="news-filters">
+            <select class="category-filter" data-current="${model.category}">
+                <option value="all">All News</option>
+                <option value="market">Market News</option>
+                <option value="indices">Index Updates</option>
+                <option value="announcements">Announcements</option>
+            </select>
+        </div>
+    </div>
+    
+    <div class="news-items">
+        <article class="news-item" data-sly-repeat.news="${model.newsItems}">
+            <div class="news-meta" data-sly-test="${model.showDate}">
+                <time class="news-date" datetime="${news.publishDate @ format='yyyy-MM-dd'}">
+                    ${news.publishDate @ format=model.dateFormat}
+                </time>
+                <span class="news-category">${news.category}</span>
+            </div>
+            
+            <div class="news-content">
+                <h3 class="news-title">
+                    <a href="${news.url}" data-sly-test="${news.url}">${news.title}</a>
+                    <span data-sly-test="${!news.url}">${news.title}</span>
+                </h3>
+                
+                <div class="news-excerpt" data-sly-test="${model.showExcerpt && news.excerpt}">
+                    <p>${news.excerpt}</p>
+                </div>
+                
+                <div class="news-actions" data-sly-test="${news.url}">
+                    <a href="${news.url}" class="read-more">Read More</a>
+                </div>
+            </div>
+        </article>
+    </div>
+    
+    <div class="news-footer" data-sly-test="${model.newsItems.size >= model.maxItems}">
+        <a href="/content/hsi/en/news.html" class="view-all-news">View All News</a>
+    </div>
+</div>
+
+<!-- =============================================================================
+     HSI CHART COMPONENT
+     apps/hsi/components/content/chartcomponent/chartcomponent.html
+     ============================================================================= -->
+<div class="hsi-chart-component" data-sly-use.model="com.hsi.aem.core.models.ChartComponentModel">
+    
+    <div class="chart-header">
+        <div class="chart-title">
+            <h3>${model.indexCode} Chart</h3>
+        </div>
+        
+        <div class="chart-controls">
+            <div class="timeframe-selector">
+                <button class="timeframe-btn" data-timeframe="1D" 
+                        data-sly-attribute.class="${model.timeframe == '1D' ? 'timeframe-btn active' : 'timeframe-btn'}">1D</button>
+                <button class="timeframe-btn" data-timeframe="5D"
+                        data-sly-attribute.class="${model.timeframe == '5D' ? 'timeframe-btn active' : 'timeframe-btn'}">5D</button>
+                <button class="timeframe-btn" data-timeframe="1M"
+                        data-sly-attribute.class="${model.timeframe == '1M' ? 'timeframe-btn active' : 'timeframe-btn'}">1M</button>
+                <button class="timeframe-btn" data-timeframe="3M"
+                        data-sly-attribute.class="${model.timeframe == '3M' ? 'timeframe-btn active' : 'timeframe-btn'}">3M</button>
+                <button class="timeframe-btn" data-timeframe="1Y"
+                        data-sly-attribute.class="${model.timeframe == '1Y' ? 'timeframe-btn active' : 'timeframe-btn'}">1Y</button>
+            </div>
+            
+            <div class="chart-type-selector">
+                <select class="chart-type" data-current="${model.chartType}">
+                    <option value="line">Line Chart</option>
+                    <option value="candlestick">Candlestick</option>
+                    <option value="area">Area Chart</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    
+    <div class="chart-container" 
+         style="height: ${model.height};"
+         data-index-code="${model.indexCode}"
+         data-chart-type="${model.chartType}"
+         data-timeframe="${model.timeframe}"
+         data-show-volume="${model.showVolume}"
+         data-show-indicators="${model.showIndicators}"
+         data-theme="${model.theme}"
+         data-chart-data="${model.chartDataJson}">
+        
+        <!-- Chart will be rendered here by JavaScript -->
+        <div class="chart-placeholder">
+            <div class="loading-spinner">Loading chart data...</div>
+        </div>
+    </div>
+    
+    <div class="chart-footer" data-sly-test="${model.showVolume || model.showIndicators}">
+        <div class="chart-options">
+            <label data-sly-test="${model.showVolume}">
+                <input type="checkbox" class="volume-toggle" checked="${model.showVolume}">
+                Show Volume
+            </label>
+            <label data-sly-test="${model.showIndicators}">
+                <input type="checkbox" class="indicators-toggle" checked="${model.showIndicators}">
+                Show Technical Indicators
+            </label>
+        </div>
+    </div>
+</div>
+
+<!-- =============================================================================
+     HSI HEADER COMPONENT
+     apps/hsi/components/structure/header/header.html
+     ============================================================================= -->
+<header class="hsi-header" data-sly-use.model="com.hsi.aem.core.models.HeaderModel">
+    
+    <div class="header-container">
+        <!-- Logo Section -->
+        <div class="header-logo">
+            <a href="/content/hsi/${model.currentLanguage}.html">
+                <img src="${model.logoPath}" 
+                     alt="${model.logoAlt}" 
+                     data-sly-test="${model.logoPath}"
+                     class="logo-image">
+                <span data-sly-test="${!model.logoPath}" class="logo-text">HSI</span>
+            </a>
+        </div>
+        
+        <!-- Main Navigation -->
+        <nav class="header-navigation" data-sly-test="${model.primaryNavigationRoot}">
+            <div data-sly-resource="${model.primaryNavigationRoot + '/jcr:content/nav'}"></div>
+        </nav>
+        
+        <!-- Utility Navigation -->
+        <div class="header-utilities">
+            
+            <!-- Search -->
+            <div class="header-search" data-sly-test

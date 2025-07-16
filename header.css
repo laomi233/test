@@ -1,0 +1,90 @@
+/* Header.css */
+.header {
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  padding: 0 40px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  height: 70px;
+}
+
+.logo img {
+  height: 40px;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  margin-left: 40px;
+  gap: 30px;
+  position: relative;
+}
+
+.nav-item {
+  position: relative;
+}
+
+.mega-menu {
+  position: absolute;
+  left: 0;
+  top: 100%;
+  display: flex;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  padding: 32px 24px;
+  min-width: 900px;
+  gap: 40px;
+  z-index: 200;
+}
+
+.mega-menu-column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 180px;
+}
+
+.mega-menu-column h4 {
+  margin: 0 0 8px 0;
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+.mega-menu-image {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 220px;
+  gap: 12px;
+}
+
+.mega-menu-image img {
+  width: 200px;
+  border-radius: 8px;
+}
+
+.mega-menu-image button {
+  background: #00b050;
+  color: #fff;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.nav a {
+  text-decoration: none;
+  color: #222;
+  font-weight: 500;
+  padding: 8px 12px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.nav a:hover {
+  background: #f0f0f0;
+}

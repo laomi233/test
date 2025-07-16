@@ -1,0 +1,24 @@
+{
+    "menu": [
+      {
+        "title": "SUSTAINABILITY",
+        "items": [
+          { "label": "Sustainability Solutions", "url": "/sustainability-solutions" },
+          { "label": "ESG Rating Model", "url": "/esg-rating-model" }
+        ]
+      },
+      {
+        "title": "FACTOR",
+        "items": [
+          { "label": "Factor Investing", "url": "/factor-investing" }
+        ]
+      }
+      // ... more columns
+    ],
+    "image": {
+      "src": "/menu-image.png",
+      "alt": "Discover Hang Seng INdexLab",
+      "buttonText": "Discover Hang Seng INdexLab",
+      "buttonUrl": "/discover"
+    }
+  }
