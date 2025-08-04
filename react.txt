@@ -1,0 +1,110 @@
+import React from 'react';
+import {
+  MapTo,
+  Container,
+  AllowedComponentsContainer,
+  withComponentMappingContext
+} from '@adobe/aem-react-editable-components';
+
+/**
+ * Reusable component to render a side container (left/right) with children
+ */
+const SideContainer = ({
+  containerPath,
+  containerItems,
+  containerItemsOrder,
+  allowedComponents,
+  sideClassName = '',
+}) => {
+  if (!containerItemsOrder || containerItemsOrder.length === 0) return null;
+
+  return (
+    <div className={sideClassName}>
+      {containerItemsOrder.map((key, index) => {
+        const item = containerItems[key];
+        if (!item || !item[":type"]) return null;
+
+        const childPath = `${containerPath}/${key}`;
+
+        return (
+          <div
+            key={key}
+            className={`child-component-wrapper ${sideClassName}-child-${index}`}
+          >
+            <Container
+              cqPath={childPath}
+              cqItems={{ [key]: item }}
+              cqItemsOrder={[key]}
+              isInEditor={true}
+            />
+          </div>
+        );
+      })}
+
+      <AllowedComponentsContainer
+        cqPath={containerPath}
+        allowedComponents={allowedComponents}
+      />
+    </div>
+  );
+};
+
+/**
+ * Main CardContainer component
+ */
+const CardContainer = (props) => {
+  const {
+    cqItems = {},
+    cqItemsOrder = [],
+    cqPath = '',
+    allowedComponents,
+  } = props;
+
+  // 解析左右容器数据
+  const leftItems = {};
+  const leftOrder = [];
+  const rightItems = {};
+  const rightOrder = [];
+
+  cqItemsOrder.forEach((key, index) => {
+    if (index % 2 === 0) {
+      leftItems[key] = cqItems[key];
+      leftOrder.push(key);
+    } else {
+      rightItems[key] = cqItems[key];
+      rightOrder.push(key);
+    }
+  });
+
+  return (
+    <div className="card-container-flex">
+      <SideContainer
+        containerPath={cqPath}
+        containerItems={leftItems}
+        containerItemsOrder={leftOrder}
+        allowedComponents={allowedComponents}
+        sideClassName="cardcontainer-leftcontainer"
+      />
+
+      <SideContainer
+        containerPath={cqPath}
+        containerItems={rightItems}
+        containerItemsOrder={rightOrder}
+        allowedComponents={allowedComponents}
+        sideClassName="cardcontainer-rightcontainer"
+      />
+    </div>
+  );
+};
+
+CardContainer.isEmpty = function (props) {
+  return (
+    !props.cqItems ||
+    !props.cqItemsOrder ||
+    props.cqItemsOrder.length === 0
+  );
+};
+
+export default MapTo('yourproject/components/cardcontainer')(
+  withComponentMappingContext(CardContainer)
+);
