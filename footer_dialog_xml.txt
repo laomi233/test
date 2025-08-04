@@ -1,116 +1,110 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<jcr:root xmlns:sling="http://sling.apache.org/jcr/sling/1.0" 
-          xmlns:granite="http://www.adobe.com/jcr/granite/1.0" 
-          xmlns:cq="http://www.day.com/jcr/cq/1.0" 
-          xmlns:jcr="http://www.jcp.org/jcr/1.0" 
-          xmlns:nt="http://www.jcp.org/jcr/nt/1.0"
-    jcr:primaryType="nt:unstructured"
-    jcr:title="Footer"
-    sling:resourceType="cq/gui/components/authoring/dialog"
-    extraClientlibs="[core.wcm.components.commons.site.link]"
-    helpPath="https://www.adobe.com/go/aem_cmp_footer_v1"
-    trackingFeature="core-components:footer:v1">
-    <content
-        jcr:primaryType="nt:unstructured"
-        sling:resourceType="granite/ui/components/coral/foundation/container">
-        <items jcr:primaryType="nt:unstructured">
-            <tabs
-                jcr:primaryType="nt:unstructured"
-                sling:resourceType="granite/ui/components/coral/foundation/tabs"
-                maximized="{Boolean}true">
-                <items jcr:primaryType="nt:unstructured">
-                    <properties
-                        jcr:primaryType="nt:unstructured"
-                        jcr:title="Properties"
-                        sling:resourceType="granite/ui/components/coral/foundation/container"
-                        margin="{Boolean}true">
-                        <items jcr:primaryType="nt:unstructured">
-                            <columns
-                                jcr:primaryType="nt:unstructured"
-                                sling:resourceType="granite/ui/components/coral/foundation/fixedcolumns"
-                                margin="{Boolean}true">
-                                <items jcr:primaryType="nt:unstructured">
-                                    <column
-                                        jcr:primaryType="nt:unstructured"
-                                        sling:resourceType="granite/ui/components/coral/foundation/container">
-                                        <items jcr:primaryType="nt:unstructured">
-                                            <title
-                                                jcr:primaryType="nt:unstructured"
-                                                sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
-                                                fieldLabel="Newsletter Title"
-                                                name="./title"
-                                                value="Receive the latest updates of Hang Seng Indexes Company"/>
-                                            <subscribeButtonText
-                                                jcr:primaryType="nt:unstructured"
-                                                sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
-                                                fieldLabel="Subscribe Button Text"
-                                                name="./subscribeButtonText"
-                                                value="Subscribe Now"/>
-                                            <companyName
-                                                jcr:primaryType="nt:unstructured"
-                                                sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
-                                                fieldLabel="Company Name"
-                                                name="./companyName"
-                                                value="Hang Seng Indexes Company Limited"/>
-                                            <companyDescription
-                                                jcr:primaryType="nt:unstructured"
-                                                sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
-                                                fieldLabel="Company Description"
-                                                name="./companyDescription"
-                                                value="A wholly-owned subsidiary of Hang Seng Bank"/>
-                                        </items>
-                                    </column>
-                                </items>
-                            </columns>
-                        </items>
-                    </properties>
-                    <links
-                        jcr:primaryType="nt:unstructured"
-                        jcr:title="Links"
-                        sling:resourceType="granite/ui/components/coral/foundation/container"
-                        margin="{Boolean}true">
-                        <items jcr:primaryType="nt:unstructured">
-                            <columns
-                                jcr:primaryType="nt:unstructured"
-                                sling:resourceType="granite/ui/components/coral/foundation/fixedcolumns"
-                                margin="{Boolean}true">
-                                <items jcr:primaryType="nt:unstructured">
-                                    <column
-                                        jcr:primaryType="nt:unstructured"
-                                        sling:resourceType="granite/ui/components/coral/foundation/container">
-                                        <items jcr:primaryType="nt:unstructured">
-                                            <sitemapLink
-                                                jcr:primaryType="nt:unstructured"
-                                                sling:resourceType="granite/ui/components/coral/foundation/form/pathfield"
-                                                fieldLabel="Sitemap Link"
-                                                name="./sitemapLink"
-                                                rootPath="/content"/>
-                                            <disclaimerLink
-                                                jcr:primaryType="nt:unstructured"
-                                                sling:resourceType="granite/ui/components/coral/foundation/form/pathfield"
-                                                fieldLabel="Disclaimer Link"
-                                                name="./disclaimerLink"
-                                                rootPath="/content"/>
-                                            <privacyLink
-                                                jcr:primaryType="nt:unstructured"
-                                                sling:resourceType="granite/ui/components/coral/foundation/form/pathfield"
-                                                fieldLabel="Personal Information Collection Statement Link"
-                                                name="./privacyLink"
-                                                rootPath="/content"/>
-                                            <maintenanceLink
-                                                jcr:primaryType="nt:unstructured"
-                                                sling:resourceType="granite/ui/components/coral/foundation/form/pathfield"
-                                                fieldLabel="System Maintenance Schedule Link"
-                                                name="./maintenanceLink"
-                                                rootPath="/content"/>
-                                        </items>
-                                    </column>
-                                </items>
-                            </columns>
-                        </items>
-                    </links>
-                </items>
-            </tabs>
-        </items>
-    </content>
-</jcr:root>
+import React from 'react';
+import {
+  MapTo,
+  Container,
+  AllowedComponentsContainer,
+  withComponentMappingContext
+} from '@adobe/aem-react-editable-components';
+
+/**
+ * Reusable component to render a side container (left/right) with children
+ */
+const SideContainer = ({
+  containerPath,
+  containerItems,
+  containerItemsOrder,
+  allowedComponents,
+  sideClassName = '',
+}) => {
+  if (!containerItemsOrder || containerItemsOrder.length === 0) return null;
+
+  return (
+    <div className={sideClassName}>
+      {containerItemsOrder.map((key, index) => {
+        const item = containerItems[key];
+        if (!item || !item[":type"]) return null;
+
+        const childPath = `${containerPath}/${key}`;
+
+        return (
+          <div
+            key={key}
+            className={`child-component-wrapper ${sideClassName}-child-${index}`}
+          >
+            <Container
+              cqPath={childPath}
+              cqItems={{ [key]: item }}
+              cqItemsOrder={[key]}
+              isInEditor={true}
+            />
+          </div>
+        );
+      })}
+
+      <AllowedComponentsContainer
+        cqPath={containerPath}
+        allowedComponents={allowedComponents}
+      />
+    </div>
+  );
+};
+
+/**
+ * Main CardContainer component
+ */
+const CardContainer = (props) => {
+  const {
+    cqItems = {},
+    cqItemsOrder = [],
+    cqPath = '',
+    allowedComponents,
+  } = props;
+
+  // 解析左右容器数据
+  const leftItems = {};
+  const leftOrder = [];
+  const rightItems = {};
+  const rightOrder = [];
+
+  cqItemsOrder.forEach((key, index) => {
+    if (index % 2 === 0) {
+      leftItems[key] = cqItems[key];
+      leftOrder.push(key);
+    } else {
+      rightItems[key] = cqItems[key];
+      rightOrder.push(key);
+    }
+  });
+
+  return (
+    <div className="card-container-flex">
+      <SideContainer
+        containerPath={cqPath}
+        containerItems={leftItems}
+        containerItemsOrder={leftOrder}
+        allowedComponents={allowedComponents}
+        sideClassName="cardcontainer-leftcontainer"
+      />
+
+      <SideContainer
+        containerPath={cqPath}
+        containerItems={rightItems}
+        containerItemsOrder={rightOrder}
+        allowedComponents={allowedComponents}
+        sideClassName="cardcontainer-rightcontainer"
+      />
+    </div>
+  );
+};
+
+CardContainer.isEmpty = function (props) {
+  return (
+    !props.cqItems ||
+    !props.cqItemsOrder ||
+    props.cqItemsOrder.length === 0
+  );
+};
+
+export default MapTo('yourproject/components/cardcontainer')(
+  withComponentMappingContext(CardContainer)
+);
