@@ -1,0 +1,472 @@
+// Carousel.jsx - 主轮播组件
+import React, { useState, useEffect } from 'react';
+import { MapTo, withComponentMappingContext } from '@adobe/aem-react-editable-components';
+import { ComponentMapping } from '@adobe/aem-spa-component-mapping';
+import './Carousel.scss';
+
+const CarouselEditConfig = {
+  emptyLabel: '轮播图',
+  isEmpty: function(props) {
+    return !props || !props.items || props.items.length === 0;
+  }
+};
+
+const Carousel = (props) => {
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(true);
+  
+  const {
+    items = [],
+    autoPlay = true,
+    autoPlayInterval = 5000,
+    showDots = true,
+    showArrows = true,
+    cqPath,
+    cqItems,
+    cqItemsOrder,
+    isInEditor
+  } = props;
+
+  // 自动播放功能
+  useEffect(() => {
+    if (autoPlay && isPlaying && items.length > 1 && !isInEditor) {
+      const interval = setInterval(() => {
+        setCurrentSlide(prev => (prev + 1) % items.length);
+      }, autoPlayInterval);
+      
+      return () => clearInterval(interval);
+    }
+  }, [autoPlay, isPlaying, items.length, autoPlayInterval, currentSlide, isInEditor]);
+
+  const nextSlide = () => {
+    setCurrentSlide(prev => (prev + 1) % items.length);
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide(prev => (prev - 1 + items.length) % items.length);
+  };
+
+  const goToSlide = (index) => {
+    setCurrentSlide(index);
+  };
+
+  // 渲染轮播项
+  const renderCarouselItem = (item, index) => {
+    if (!item) return null;
+
+    const ItemComponent = ComponentMapping.get(item[':type']);
+    
+    if (ItemComponent) {
+      return (
+        <div 
+          key={`carousel-item-${index}`}
+          className={`carousel-slide ${index === currentSlide ? 'active' : ''}`}
+        >
+          <ItemComponent {...item} />
+        </div>
+      );
+    }
+
+    // 如果没有找到对应的组件，显示占位符
+    return (
+      <div 
+        key={`carousel-item-${index}`}
+        className={`carousel-slide placeholder ${index === currentSlide ? 'active' : ''}`}
+      >
+        <div className="placeholder-content">
+          <p>组件类型: {item[':type']}</p>
+          <p>请确保组件已正确注册</p>
+        </div>
+      </div>
+    );
+  };
+
+  // 在编辑模式下渲染所有项目以支持拖拽
+  const renderEditMode = () => {
+    if (!cqItems || !cqItemsOrder) return null;
+
+    return cqItemsOrder.map((key, index) => {
+      const item = cqItems[key];
+      const ItemComponent = ComponentMapping.get(item[':type']);
+      
+      return (
+        <div 
+          key={key}
+          className={`carousel-slide edit-mode ${index === currentSlide ? 'active' : ''}`}
+          data-cq-data-path={`${cqPath}/${key}`}
+        >
+          {ItemComponent ? (
+            <ItemComponent {...item} />
+          ) : (
+            <div className="placeholder-content">
+              <p>组件类型: {item[':type']}</p>
+              <p>请确保组件已正确注册</p>
+            </div>
+          )}
+        </div>
+      );
+    });
+  };
+
+  if (items.length === 0 && !isInEditor) {
+    return (
+      <div className="carousel-empty">
+        <p>请添加轮播内容</p>
+      </div>
+    );
+  }
+
+  return (
+    <div 
+      className="carousel-container"
+      onMouseEnter={() => setIsPlaying(false)}
+      onMouseLeave={() => setIsPlaying(true)}
+      data-cq-data-path={cqPath}
+    >
+      <div className="carousel-wrapper">
+        <div 
+          className="carousel-track"
+          style={{
+            transform: `translateX(-${currentSlide * 100}%)`,
+            transition: isInEditor ? 'none' : 'transform 0.3s ease-in-out'
+          }}
+        >
+          {isInEditor ? renderEditMode() : items.map(renderCarouselItem)}
+        </div>
+
+        {/* 导航箭头 */}
+        {showArrows && items.length > 1 && (
+          <>
+            <button 
+              className="carousel-arrow carousel-arrow-prev"
+              onClick={prevSlide}
+              aria-label="上一张"
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+              </svg>
+            </button>
+            <button 
+              className="carousel-arrow carousel-arrow-next"
+              onClick={nextSlide}
+              aria-label="下一张"
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
+              </svg>
+            </button>
+          </>
+        )}
+
+        {/* 指示器圆点 */}
+        {showDots && items.length > 1 && (
+          <div className="carousel-dots">
+            {items.map((_, index) => (
+              <button
+                key={index}
+                className={`carousel-dot ${index === currentSlide ? 'active' : ''}`}
+                onClick={() => goToSlide(index)}
+                aria-label={`转到第 ${index + 1} 张`}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+      
+      {/* 在编辑模式下显示控制面板 */}
+      {isInEditor && (
+        <div className="carousel-editor-controls">
+          <div className="slide-counter">
+            幻灯片 {currentSlide + 1} / {Math.max(items.length, cqItemsOrder?.length || 0)}
+          </div>
+          <div className="slide-nav">
+            {Array.from({ length: Math.max(items.length, cqItemsOrder?.length || 0) }).map((_, index) => (
+              <button
+                key={index}
+                className={`slide-nav-btn ${index === currentSlide ? 'active' : ''}`}
+                onClick={() => goToSlide(index)}
+              >
+                {index + 1}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default MapTo('myproject/components/carousel')(
+  withComponentMappingContext(Carousel), 
+  CarouselEditConfig
+);
+
+// Carousel.scss - 样式文件
+/*
+.carousel-container {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: #f5f5f5;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+  .carousel-wrapper {
+    position: relative;
+    width: 100%;
+    height: 400px; // 默认高度，可通过props调整
+  }
+
+  .carousel-track {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.3s ease-in-out;
+  }
+
+  .carousel-slide {
+    flex: 0 0 100%;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+
+    &.active {
+      opacity: 1;
+    }
+
+    &.edit-mode {
+      opacity: 1;
+      border: 2px dashed #ccc;
+      min-height: 200px;
+      
+      &.active {
+        border-color: #007cba;
+        background-color: rgba(0, 124, 186, 0.1);
+      }
+    }
+
+    .placeholder-content {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+      
+      p {
+        margin: 8px 0;
+      }
+    }
+  }
+
+  .carousel-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    z-index: 2;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.7);
+    }
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    &.carousel-arrow-prev {
+      left: 10px;
+    }
+
+    &.carousel-arrow-next {
+      right: 10px;
+    }
+  }
+
+  .carousel-dots {
+    position: absolute;
+    bottom: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    z-index: 2;
+  }
+
+  .carousel-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.7);
+    }
+
+    &.active {
+      background: white;
+    }
+  }
+
+  .carousel-editor-controls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 10px;
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 3;
+
+    .slide-counter {
+      font-size: 12px;
+      color: #333;
+      text-align: center;
+    }
+
+    .slide-nav {
+      display: flex;
+      gap: 4px;
+    }
+
+    .slide-nav-btn {
+      width: 24px;
+      height: 24px;
+      border: 1px solid #ccc;
+      background: white;
+      font-size: 10px;
+      cursor: pointer;
+      border-radius: 2px;
+
+      &:hover {
+        background: #f0f0f0;
+      }
+
+      &.active {
+        background: #007cba;
+        color: white;
+        border-color: #007cba;
+      }
+    }
+  }
+
+  .carousel-empty {
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+  }
+}
+*/
+
+// CarouselContainer.jsx - 容器组件，用于处理AEM特定逻辑
+import React from 'react';
+import { Container, MapTo } from '@adobe/aem-react-editable-components';
+
+const CarouselContainer = (props) => {
+  return (
+    <Container
+      {...props}
+      className="carousel-container-wrapper"
+      placeholder="将组件拖拽到这里创建轮播内容"
+    />
+  );
+};
+
+export const CarouselContainerEditConfig = {
+  emptyLabel: '轮播容器',
+  isEmpty: function(props) {
+    return !props || !props.cqItemsOrder || props.cqItemsOrder.length === 0;
+  }
+};
+
+export default MapTo('myproject/components/carousel-container')(
+  CarouselContainer,
+  CarouselContainerEditConfig
+);
+
+// AEM 模型定义 - .content.xml (需要在AEM中创建)
+/*
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root xmlns:sling="http://sling.apache.org/jcr/sling/1.0" xmlns:cq="http://www.day.com/jcr/cq/1.0" xmlns:jcr="http://www.jcp.org/jcr/1.0"
+    jcr:primaryType="cq:Component"
+    jcr:title="轮播组件"
+    sling:resourceSuperType="core/wcm/components/container/v1/container"
+    componentGroup="My Project - Content">
+    <cq:editConfig jcr:primaryType="cq:EditConfig">
+        <cq:dropTargets jcr:primaryType="nt:unstructured">
+            <container
+                jcr:primaryType="cq:DropTargetConfig"
+                accept="[.*]"
+                groups="[default]"
+                propertyName="./items"/>
+        </cq:dropTargets>
+    </cq:editConfig>
+    <cq:childEditConfig jcr:primaryType="cq:EditConfig">
+        <cq:dropTargets jcr:primaryType="nt:unstructured">
+            <container
+                jcr:primaryType="cq:DropTargetConfig"
+                accept="[.*]"
+                groups="[default]"
+                propertyName="./items"/>
+        </cq:dropTargets>
+    </cq:childEditConfig>
+</jcr:root>
+*/
+
+// 组件注册文件 - ComponentMapping.js
+import { MapTo } from '@adobe/aem-react-editable-components';
+import Carousel from './Carousel';
+
+// 注册轮播组件
+MapTo('myproject/components/carousel')(Carousel);
+
+// 确保其他可拖拽的组件也已注册
+// 例如：
+// import TextComponent from './Text';
+// import ImageComponent from './Image';
+// MapTo('myproject/components/text')(TextComponent);
+// MapTo('myproject/components/image')(ImageComponent);
+
+// 使用示例组件
+const ExampleTextComponent = (props) => (
+  <div className="example-text">
+    <h3>{props.title || '示例标题'}</h3>
+    <p>{props.text || '这是一个示例文本组件，可以拖拽到轮播中。'}</p>
+  </div>
+);
+
+const ExampleImageComponent = (props) => (
+  <div className="example-image">
+    <img 
+      src={props.src || 'https://via.placeholder.com/800x400'} 
+      alt={props.alt || '示例图片'} 
+      style={{ width: '100%', height: 'auto' }}
+    />
+    {props.caption && <p className="caption">{props.caption}</p>}
+  </div>
+);
+
+// 注册示例组件
+MapTo('myproject/components/example-text')(ExampleTextComponent);
+MapTo('myproject/components/example-image')(ExampleImageComponent);
