@@ -1,0 +1,326 @@
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import {
+  MapTo,
+  Container,
+} from "@adobe/aem-react-editable-components";
+
+/**
+ * AEM React SPA Carousel Container
+ * --------------------------------
+ * - 作为“容器组件”（Container），支持在编辑器中拖拽任意子组件到轮播中。
+ * - 每个直接子组件都会被包装成一个 slide。
+ * - 支持箭头、圆点、自动播放（编辑器中自动禁用），以及循环播放。
+ * - 使用纯 CSS scroll-snap + JS 方式实现，避免引入三方库。
+ *
+ * 使用方式（AEM 端）：
+ * 1) 在 /apps/<project>/components/carousel 创建一个组件（resourceType 例如："my-site/components/carousel"）。
+ * 2) 在 React 入口里 import 本文件，保证 MapTo 注册的 resourceType 与上面一致。
+ * 3) 为该组件设置内容策略（Policy）：允许在此容器中拖入任意组件（或受限白名单）。
+ * 4) 通过 _cq_dialog（示例见下方注释）配置可编辑属性：自动播放、间隔、显示箭头/圆点、循环等。
+ */
+
+// ------------------------------
+// 类型声明（也可改为 JS + JSDoc）
+// ------------------------------
+export type CarouselModel = {
+  /* AEM 注入的属性 */
+  cqPath?: string;
+  cqItems?: Record<string, any>;
+  cqItemsOrder?: string[];
+  isInEditor?: boolean; // AEM SPA Editor 中自动注入
+
+  /* 可编辑属性（来自 _cq_dialog） */
+  autoplay?: boolean;
+  interval?: number; // ms
+  showArrows?: boolean;
+  showDots?: boolean;
+  loop?: boolean;
+};
+
+const EDIT_CONFIG = {
+  emptyLabel: "Carousel",
+  isEmpty: (props: CarouselModel) => {
+    const order = props?.cqItemsOrder || [];
+    return order.length === 0;
+  },
+  isContainer: true, // 关键：将该组件标记为容器，允许拖拽子组件
+};
+
+/**
+ * 继承 AEM 的 Container，拿到 childComponents / placeholder。
+ * 注意：Container 会基于 cqItems/cqItemsOrder 解析出 this.childComponents。
+ */
+class CarouselContainer extends Container<CarouselModel> {}
+
+function useAutoPlay(
+  viewportRef: React.RefObject<HTMLDivElement>,
+  { autoplay, interval, isInEditor, loop }: {
+    autoplay?: boolean;
+    interval?: number;
+    isInEditor?: boolean;
+    loop?: boolean;
+  }
+) {
+  const timer = useRef<number | null>(null);
+  const [hovering, setHovering] = useState(false);
+
+  useEffect(() => {
+    // 编辑器中或未开启自动播放则不启用
+    if (!autoplay || isInEditor) return;
+
+    const vp = viewportRef.current;
+    if (!vp) return;
+
+    const tick = () => {
+      const slideWidth = vp.clientWidth;
+      const maxScroll = vp.scrollWidth - slideWidth;
+      const next = Math.min(vp.scrollLeft + slideWidth, maxScroll);
+      const atEnd = vp.scrollLeft >= maxScroll - 1;
+      if (atEnd) {
+        if (loop) vp.scrollTo({ left: 0, behavior: "smooth" });
+      } else {
+        vp.scrollTo({ left: next, behavior: "smooth" });
+      }
+    };
+
+    const start = () => {
+      if (timer.current) window.clearInterval(timer.current);
+      timer.current = window.setInterval(tick, Math.max(1000, interval || 5000));
+    };
+
+    if (!hovering) start();
+
+    return () => {
+      if (timer.current) window.clearInterval(timer.current);
+    };
+  }, [autoplay, interval, isInEditor, loop, hovering]);
+
+  return {
+    bindHover: {
+      onMouseEnter: () => setHovering(true),
+      onMouseLeave: () => setHovering(false),
+      onFocus: () => setHovering(true),
+      onBlur: () => setHovering(false),
+    },
+  } as const;
+}
+
+function useSlidesMeta(container: CarouselContainer, dotsRef: React.RefObject<HTMLDivElement>) {
+  // 通过 Container 暴露的 childComponents 组装 slide 列表
+  const childrenArray = useMemo(() => {
+    // @ts-ignore childComponents 在父类上
+    const raw = container?.childComponents as React.ReactNode[] | undefined;
+    return React.Children.toArray(raw || []);
+  }, [container]);
+
+  // 圆点需要的 slide 数
+  const count = childrenArray.length;
+
+  // 给每个圆点按钮设置 aria-controls
+  useEffect(() => {
+    if (!dotsRef.current) return;
+    const buttons = dotsRef.current.querySelectorAll("button[data-slide-index]");
+    buttons.forEach((btn, idx) => {
+      (btn as HTMLButtonElement).setAttribute("aria-label", `Go to slide ${idx + 1}`);
+    });
+  }, [childrenArray, dotsRef]);
+
+  return { childrenArray, count } as const;
+}
+
+function CarouselView(props: CarouselModel & { container: CarouselContainer }) {
+  const { isInEditor, autoplay, interval, showArrows = true, showDots = true, loop = true } = props;
+
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const dotsRef = useRef<HTMLDivElement>(null);
+
+  const { bindHover } = useAutoPlay(viewportRef, { autoplay, interval, isInEditor, loop });
+  const { childrenArray, count } = useSlidesMeta(props.container, dotsRef);
+
+  // 前进/后退
+  const go = (dir: 1 | -1) => {
+    const vp = viewportRef.current;
+    if (!vp) return;
+    const slideWidth = vp.clientWidth;
+    const maxScroll = vp.scrollWidth - slideWidth;
+    let next = vp.scrollLeft + dir * slideWidth;
+
+    if (next < 0) next = loop ? maxScroll : 0;
+    if (next > maxScroll) next = loop ? 0 : maxScroll;
+
+    vp.scrollTo({ left: next, behavior: "smooth" });
+  };
+
+  const goTo = (index: number) => {
+    const vp = viewportRef.current;
+    if (!vp) return;
+    const slideWidth = vp.clientWidth;
+    vp.scrollTo({ left: index * slideWidth, behavior: "smooth" });
+  };
+
+  // 计算当前页码（用于高亮圆点）
+  const [active, setActive] = useState(0);
+  useEffect(() => {
+    const vp = viewportRef.current;
+    if (!vp) return;
+    const onScroll = () => {
+      const slideWidth = vp.clientWidth || 1;
+      const idx = Math.round(vp.scrollLeft / slideWidth);
+      setActive(idx);
+    };
+    vp.addEventListener("scroll", onScroll, { passive: true });
+    return () => vp.removeEventListener("scroll", onScroll);
+  }, []);
+
+  return (
+    <div className="aem-carousel" {...bindHover}>
+      {showArrows && (
+        <button className="nav prev" aria-label="Previous slide" onClick={() => go(-1)}>
+          ‹
+        </button>
+      )}
+
+      <div
+        className="viewport"
+        ref={viewportRef}
+        role="region"
+        aria-roledescription="carousel"
+        aria-label="Carousel"
+      >
+        <div className="track">
+          {childrenArray.length === 0 && (
+            // AEM 占位符：允许在编辑器中将组件拖入
+            // @ts-ignore placeholder 在父类上
+            props.container.placeholder
+          )}
+
+          {childrenArray.map((child, idx) => (
+            <div className="slide" key={idx} role="group" aria-roledescription="slide" aria-label={`${idx + 1} of ${count}`}>
+              {child}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {showArrows && (
+        <button className="nav next" aria-label="Next slide" onClick={() => go(1)}>
+          ›
+        </button>
+      )}
+
+      {showDots && count > 1 && (
+        <div className="dots" ref={dotsRef} role="tablist" aria-label="Slide dots">
+          {Array.from({ length: count }).map((_, i) => (
+            <button
+              key={i}
+              data-slide-index={i}
+              role="tab"
+              aria-selected={active === i}
+              className={"dot" + (active === i ? " active" : "")}
+              onClick={() => goTo(i)}
+            />
+          ))}
+        </div>
+      )}
+
+      <style>{`
+        .aem-carousel { position: relative; width: 100%; }
+        .viewport { overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
+        .track { display: grid; grid-auto-flow: column; grid-auto-columns: 100%; }
+        .slide { scroll-snap-align: start; width: 100%; }
+
+        .nav { position: absolute; top: 50%; transform: translateY(-50%); z-index: 2; border: none; background: rgba(0,0,0,.4); color: #fff; width: 36px; height: 36px; border-radius: 9999px; cursor: pointer; display: grid; place-items: center; }
+        .nav.prev { left: 8px; }
+        .nav.next { right: 8px; }
+
+        .dots { margin-top: 8px; display: flex; gap: 8px; justify-content: center; }
+        .dot { width: 8px; height: 8px; border-radius: 9999px; border: none; background: #c7c7c7; cursor: pointer; }
+        .dot.active { background: #333; }
+
+        /* 在编辑器里，确保 placeholder 有空间可见 */
+        [data-cq-is-edit] .viewport { min-height: 120px; }
+      `}</style>
+    </div>
+  );
+}
+
+/**
+ * 包装成 AEM React 组件：
+ * - 复用 Container 的解析与 placeholder 能力
+ */
+function Carousel(props: CarouselModel) {
+  const container = new CarouselContainer(props);
+  return <CarouselView {...props} container={container} />;
+}
+
+// 将组件映射到 AEM 资源类型（按需修改 resourceType）
+MapTo("my-site/components/carousel")(Carousel as any, EDIT_CONFIG);
+
+export default Carousel;
+
+/*
+====================================
+AEM 端配置参考（非必须，示例）
+====================================
+
+1) 组件定义：/apps/my-site/components/carousel/.content.xml
+
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root
+    xmlns:sling="http://sling.apache.org/jcr/sling/1.0"
+    xmlns:cq="http://www.day.com/jcr/cq/1.0"
+    xmlns:jcr="http://www.jcp.org/jcr/1.0"
+    jcr:primaryType="cq:Component"
+    jcr:title="Carousel (SPA)"
+    componentGroup="My Site - Containers"
+    sling:resourceSuperType="wcm/foundation/components/responsivegrid"/>
+
+2) 对话框：/apps/my-site/components/carousel/_cq_dialog/.content.xml
+
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root
+    xmlns:sling="http://sling.apache.org/jcr/sling/1.0"
+    xmlns:cq="http://www.day.com/jcr/cq/1.0"
+    xmlns:nt="http://www.jcp.org/jcr/nt/1.0"
+    jcr:primaryType="nt:unstructured"
+    jcr:title="Carousel"
+    sling:resourceType="cq/gui/components/authoring/dialog">
+  <content jcr:primaryType="nt:unstructured" sling:resourceType="granite/ui/components/coral/foundation/container">
+    <items jcr:primaryType="nt:unstructured">
+      <tabs jcr:primaryType="nt:unstructured" sling:resourceType="granite/ui/components/coral/foundation/tabs">
+        <items jcr:primaryType="nt:unstructured">
+          <props jcr:primaryType="nt:unstructured" jcr:title="Properties" sling:resourceType="granite/ui/components/coral/foundation/container">
+            <items jcr:primaryType="nt:unstructured">
+              <autoplay jcr:primaryType="nt:unstructured" sling:resourceType="granite/ui/components/coral/foundation/form/checkbox" name="./autoplay" text="Autoplay"/>
+              <interval jcr:primaryType="nt:unstructured" sling:resourceType="granite/ui/components/coral/foundation/form/numberfield" name="./interval" fieldLabel="Interval (ms)" min="1000" step="500" value="5000"/>
+              <showArrows jcr:primaryType="nt:unstructured" sling:resourceType="granite/ui/components/coral/foundation/form/checkbox" name="./showArrows" text="Show arrows" checked="true"/>
+              <showDots jcr:primaryType="nt:unstructured" sling:resourceType="granite/ui/components/coral/foundation/form/checkbox" name="./showDots" text="Show dots" checked="true"/>
+              <loop jcr:primaryType="nt:unstructured" sling:resourceType="granite/ui/components/coral/foundation/form/checkbox" name="./loop" text="Loop" checked="true"/>
+            </items>
+          </props>
+        </items>
+      </tabs>
+    </items>
+  </content>
+</jcr:root>
+
+3) 内容策略（Policy）：
+- 在模板编辑器中选择该 Carousel 组件的策略，配置 Allowed Components。
+- 勾选“Allow all components”或仅选择允许的组件清单。
+
+4) 页面 JSON 模型（示例结构，供理解）：
+{
+  ":type": "my-site/components/carousel",
+  "autoplay": true,
+  "interval": 5000,
+  "showArrows": true,
+  "showDots": true,
+  "loop": true,
+  "cq:items": {
+    "item_1": { ":type": "core/wcm/components/teaser/v2/teaser", ... },
+    "item_2": { ":type": "my-site/components/custom-card", ... }
+  },
+  "cq:itemsOrder": ["item_1", "item_2"]
+}
+
+*/
