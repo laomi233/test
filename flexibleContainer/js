@@ -1,0 +1,149 @@
+import React from 'react';
+import { MapTo } from '@adobe/aem-react-editable-components';
+import { Container, ContainerV1IsEmptyFn } from '@adobe/aem-core-components-react-spa/dist/container/v1/Container';
+
+/**
+ * Default Edit configuration for the Container component that interact with the Core Container component and sub-types
+ *
+ * @type EditConfig
+ */
+const FlexibleContainerEditConfig = {
+    emptyLabel: 'Flexible Container',
+    isEmpty: ContainerV1IsEmptyFn,
+    resourceType: 'yourproject/components/flexiblecontainer'
+};
+
+/**
+ * Flexible Container component that extends the core Container functionality
+ * with additional styling and layout options
+ */
+const FlexibleContainer = (props) => {
+    const {
+        backgroundColor,
+        backgroundImage,
+        layoutDirection = 'column',
+        containerPadding = '20px',
+        containerMargin = '0',
+        minHeight = '100px',
+        maxWidth = '100%',
+        cssClasses = '',
+        containerId,
+        cqPath,
+        isInEditor,
+        ...otherProps
+    } = props;
+
+    // Generate container styles based on properties
+    const containerStyles = {
+        display: 'flex',
+        flexDirection: layoutDirection,
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: '16px',
+        padding: containerPadding,
+        margin: containerMargin,
+        minHeight: minHeight,
+        maxWidth: maxWidth,
+        width: '100%',
+        position: 'relative',
+        boxSizing: 'border-box'
+    };
+
+    // Add background color if specified
+    if (backgroundColor) {
+        containerStyles.backgroundColor = backgroundColor;
+    }
+
+    // Add background image if specified
+    if (backgroundImage) {
+        containerStyles.backgroundImage = `url(${backgroundImage})`;
+        containerStyles.backgroundSize = 'cover';
+        containerStyles.backgroundPosition = 'center';
+        containerStyles.backgroundRepeat = 'no-repeat';
+    }
+
+    // Add custom CSS classes
+    const cssClassNames = [
+        'flexible-container',
+        `layout-${layoutDirection}`,
+        cssClasses
+    ].filter(Boolean).join(' ');
+
+    // In edit mode, add visual indicators
+    const editModeStyles = isInEditor ? {
+        border: '2px dashed #ccc',
+        borderRadius: '4px',
+        transition: 'all 0.2s ease',
+        cursor: 'default'
+    } : {};
+
+    // Merge all styles
+    const finalStyles = {
+        ...containerStyles,
+        ...editModeStyles
+    };
+
+    // Render empty state for editor
+    const renderEmptyState = () => {
+        if (!isInEditor) return null;
+        
+        return (
+            <div style={{
+                padding: '40px 20px',
+                textAlign: 'center',
+                color: '#666',
+                fontSize: '14px',
+                fontFamily: 'Adobe Clean, sans-serif',
+                backgroundColor: 'rgba(0, 0, 0, 0.02)',
+                borderRadius: '4px',
+                border: '1px dashed #ddd'
+            }}>
+                <div style={{ marginBottom: '8px', fontSize: '16px' }}>
+                    📦 Flexible Container
+                </div>
+                <div>
+                    Drag and drop components here
+                </div>
+                <div style={{ fontSize: '12px', marginTop: '8px', color: '#999' }}>
+                    Layout: {layoutDirection === 'column' ? 'Vertical' : 'Horizontal'}
+                </div>
+            </div>
+        );
+    };
+
+    return (
+        <div 
+            id={containerId}
+            className={cssClassNames}
+            style={finalStyles}
+            data-cq-data-path={cqPath}
+        >
+            <Container
+                {...otherProps}
+                className="flexible-container-content"
+                style={{
+                    display: 'flex',
+                    flexDirection: layoutDirection,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    gap: '16px',
+                    width: '100%',
+                    flexWrap: layoutDirection === 'row' ? 'wrap' : 'nowrap'
+                }}
+            />
+            {ContainerV1IsEmptyFn(props) && renderEmptyState()}
+        </div>
+    );
+};
+
+/**
+ * Enhanced Container component with flexible layout options
+ * Maps to the AEM component resource type
+ */
+const EditableFlexibleContainer = MapTo('yourproject/components/flexiblecontainer')(
+    FlexibleContainer,
+    FlexibleContainerEditConfig
+);
+
+export default EditableFlexibleContainer;
+export { FlexibleContainer, FlexibleContainerEditConfig };

@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root xmlns:sling="http://sling.apache.org/jcr/sling/1.0" xmlns:cq="http://www.day.com/jcr/cq/1.0" xmlns:jcr="http://www.jcp.org/jcr/1.0" xmlns:nt="http://www.jcp.org/jcr/nt/1.0" xmlns:granite="http://www.adobe.com/jcr/granite/1.0"
+    jcr:primaryType="nt:unstructured"
+    jcr:title="Flexible Container"
+    sling:resourceType="cq/gui/components/authoring/dialog"
+    extraClientlibs="[yourproject.author]"
+    helpPath="en/cq/current/wcm/default_components.html#Title"
+    mode="edit">
+    <content
+        jcr:primaryType="nt:unstructured"
+        sling:resourceType="granite/ui/components/coral/foundation/container">
+        <items jcr:primaryType="nt:unstructured">
+            <tabs
+                jcr:primaryType="nt:unstructured"
+                sling:resourceType="granite/ui/components/coral/foundation/tabs"
+                maximized="{Boolean}true">
+                <items jcr:primaryType="nt:unstructured">
+                    <layout
+                        jcr:primaryType="nt:unstructured"
+                        jcr:title="Layout"
+                        sling:resourceType="granite/ui/components/coral/foundation/container"
+                        margin="{Boolean}true">
+                        <items jcr:primaryType="nt:unstructured">
+                            <layoutDirection
+                                jcr:primaryType="nt:unstructured"
+                                sling:resourceType="granite/ui/components/coral/foundation/form/select"
+                                fieldLabel="Layout Direction"
+                                name="./layoutDirection">
+                                <items jcr:primaryType="nt:unstructured">
+                                    <column
+                                        jcr:primaryType="nt:unstructured"
+                                        text="Vertical (Column)"
+                                        value="column"/>
+                                    <row
+                                        jcr:primaryType="nt:unstructured"
+                                        text="Horizontal (Row)"
+                                        value="row"/>
+                                </items>
+                            </layoutDirection>
+                            <containerPadding
+                                jcr:primaryType="nt:unstructured"
+                                sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                                fieldLabel="Container Padding"
+                                name="./containerPadding"
+                                value="20px"/>
+                            <containerMargin
+                                jcr:primaryType="nt:unstructured"
+                                sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                                fieldLabel="Container Margin"
+                                name="./containerMargin"
+                                value="0"/>
+                            <minHeight
+                                jcr:primaryType="nt:unstructured"
+                                sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                                fieldLabel="Minimum Height"
+                                name="./minHeight"
+                                value="100px"/>
+                            <maxWidth
+                                jcr:primaryType="nt:unstructured"
+                                sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                                fieldLabel="Maximum Width"
+                                name="./maxWidth"
+                                value="100%"/>
+                        </items>
+                    </layout>
+                    <background
+                        jcr:primaryType="nt:unstructured"
+                        jcr:title="Background"
+                        sling:resourceType="granite/ui/components/coral/foundation/container"
+                        margin="{Boolean}true">
+                        <items jcr:primaryType="nt:unstructured">
+                            <backgroundColor
+                                jcr:primaryType="nt:unstructured"
+                                sling:resourceType="granite/ui/components/coral/foundation/form/colorfield"
+                                fieldLabel="Background Color"
+                                name="./backgroundColor"
+                                variant="swatch"/>
+                            <backgroundImage
+                                jcr:primaryType="nt:unstructured"
+                                sling:resourceType="granite/ui/components/coral/foundation/form/pathfield"
+                                fieldLabel="Background Image"
+                                name="./backgroundImage"
+                                rootPath="/content/dam"/>
+                        </items>
+                    </background>
+                    <advanced
+                        jcr:primaryType="nt:unstructured"
+                        jcr:title="Advanced"
+                        sling:resourceType="granite/ui/components/coral/foundation/container"
+                        margin="{Boolean}true">
+                        <items jcr:primaryType="nt:unstructured">
+                            <enableDropTarget
+                                jcr:primaryType="nt:unstructured"
+                                sling:resourceType="granite/ui/components/coral/foundation/form/checkbox"
+                                fieldLabel="Enable Drop Target"
+                                name="./enableDropTarget"
+                                text="Allow components to be dropped into this container"
+                                checked="{Boolean}true"
+                                value="{Boolean}true"/>
+                            <cssClasses
+                                jcr:primaryType="nt:unstructured"
+                                sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                                fieldLabel="CSS Classes"
+                                name="./cssClasses"/>
+                        </items>
+                    </advanced>
+                </items>
+            </tabs>
+        </items>
+    </content>
+</jcr:root>
