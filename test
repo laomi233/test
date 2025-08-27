@@ -1,0 +1,215 @@
+# AEM React SPA Template Implementation
+
+## 1. Template Definition (.content.xml)
+**Path:** `/apps/[your-project]/templates/spa-page-template/.content.xml`
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root xmlns:cq="http://www.day.com/jcr/cq/1.0" 
+          xmlns:jcr="http://www.jcp.org/jcr/1.0"
+          xmlns:sling="http://sling.apache.org/jcr/sling/1.0"
+    jcr:primaryType="cq:Template">
+    <jcr:content
+        jcr:primaryType="cq:PageContent"
+        jcr:title="SPA Page Template"
+        sling:resourceType="[your-project]/components/structure/page"
+        cq:designPath="/etc/designs/[your-project]"
+        cq:deviceGroups="[mobile/groups/responsive]"/>
+</jcr:root>
+```
+
+## 2. Template Policy (.content.xml)
+**Path:** `/apps/[your-project]/templates/spa-page-template/policies/.content.xml`
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root xmlns:cq="http://www.day.com/jcr/cq/1.0" 
+          xmlns:jcr="http://www.jcp.org/jcr/1.0"
+          xmlns:sling="http://sling.apache.org/jcr/sling/1.0"
+    jcr:primaryType="cq:Page">
+    <jcr:content
+        jcr:primaryType="nt:unstructured"
+        sling:resourceType="wcm/core/components/policies/mappings">
+        <root
+            jcr:primaryType="nt:unstructured"
+            cq:policy="[your-project]/components/structure/page/policy_root">
+            <responsivegrid
+                jcr:primaryType="nt:unstructured"
+                cq:policy="[your-project]/components/container/policy_grid"/>
+        </root>
+    </jcr:content>
+</jcr:root>
+```
+
+## 3. Page Component Structure (.content.xml)
+**Path:** `/apps/[your-project]/components/structure/page/.content.xml`
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root xmlns:sling="http://sling.apache.org/jcr/sling/1.0"
+          xmlns:cq="http://www.day.com/jcr/cq/1.0"
+          xmlns:jcr="http://www.jcp.org/jcr/1.0"
+    jcr:primaryType="cq:Component"
+    jcr:title="SPA Page"
+    sling:resourceSuperType="core/wcm/components/page/v2/page"
+    componentGroup=".hidden"/>
+```
+
+## 4. Page Component HTL Template
+**Path:** `/apps/[your-project]/components/structure/page/page.html`
+
+```html
+<!DOCTYPE html>
+<html data-sly-use.page="com.adobe.cq.wcm.core.components.models.Page"
+      data-sly-use.head="head.html"
+      data-sly-use.footer="footer.html" 
+      data-sly-use.redirect="redirect.html"
+      lang="${page.language}"
+      data-sly-test="${!wcmmode.disabled}">
+    <head data-sly-call="${head.head @ page = page}"></head>
+    <body class="page" id="page-${page.id @ context='attribute'}">
+        <script>
+            dataLayer = window.dataLayer || [];
+        </script>
+        
+        <!-- Skip to main content link for accessibility -->
+        <a class="skip-link" href="#main">Skip to main content</a>
+        
+        <!-- Navigation Component -->
+        <header class="site-header">
+            <sly data-sly-resource="${'navigation' @ resourceType='[your-project]/components/navigation'}"></sly>
+        </header>
+
+        <!-- Main Content Area with Parsys -->
+        <main id="main" class="main-content">
+            <sly data-sly-test="${wcmmode.edit || wcmmode.preview}">
+                <div class="aem-Grid aem-Grid--12 aem-Grid--default--12">
+                    <sly data-sly-resource="${'root' @ resourceType='wcm/foundation/components/responsivegrid'}"></sly>
+                </div>
+            </sly>
+            <sly data-sly-test="${!wcmmode.edit && !wcmmode.preview}">
+                <div id="spa-root"></div>
+            </sly>
+        </main>
+
+        <!-- Footer Component -->
+        <footer class="site-footer">
+            <sly data-sly-resource="${'footer' @ resourceType='[your-project]/components/footer'}"></sly>
+        </footer>
+
+        <sly data-sly-call="${footer.footer @ page = page}"></sly>
+        <sly data-sly-call="${redirect.redirect @ page = page}"></sly>
+    </body>
+</html>
+```
+
+## 5. Page Component React Integration
+**Path:** `/apps/[your-project]/components/structure/page/clientlibs/js/page.js`
+
+```javascript
+import { MapTo } from '@adobe/aem-react-editable-components';
+import { Page } from '@adobe/aem-react-editable-components';
+
+const EditConfig = {
+    emptyLabel: 'Page',
+    isEmpty: function(props) {
+        return !props || !props.cqItemsOrder || props.cqItemsOrder.length < 1;
+    }
+};
+
+export default MapTo('[your-project]/components/structure/page')(Page, EditConfig);
+```
+
+## 6. Responsive Grid Policy
+**Path:** `/conf/[your-project]/settings/wcm/policies/_rep_policy.xml`
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root xmlns:cq="http://www.day.com/jcr/cq/1.0" 
+          xmlns:jcr="http://www.jcp.org/jcr/1.0"
+          xmlns:rep="internal"
+    jcr:primaryType="cq:Page">
+    <jcr:content jcr:primaryType="nt:unstructured">
+        <[your-project] jcr:primaryType="nt:unstructured">
+            <components jcr:primaryType="nt:unstructured">
+                <container jcr:primaryType="nt:unstructured">
+                    <policy_grid
+                        jcr:primaryType="nt:unstructured"
+                        jcr:title="Content Grid Policy"
+                        sling:resourceType="wcm/core/components/policy/policy"
+                        components="[
+                            [your-project]/components/text,
+                            [your-project]/components/image,
+                            [your-project]/components/title,
+                            [your-project]/components/button,
+                            wcm/foundation/components/responsivegrid
+                        ]"/>
+                </container>
+            </components>
+        </[your-project]>
+    </jcr:content>
+</jcr:root>
+```
+
+## 7. Template Initial Structure
+**Path:** `/apps/[your-project]/templates/spa-page-template/initial/.content.xml`
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root xmlns:cq="http://www.day.com/jcr/cq/1.0" 
+          xmlns:jcr="http://www.jcp.org/jcr/1.0"
+          xmlns:sling="http://sling.apache.org/jcr/sling/1.0"
+    jcr:primaryType="cq:Page">
+    <jcr:content
+        jcr:primaryType="cq:PageContent"
+        jcr:title="SPA Page"
+        sling:resourceType="[your-project]/components/structure/page">
+        <root
+            jcr:primaryType="nt:unstructured"
+            sling:resourceType="wcm/foundation/components/responsivegrid">
+            <responsivegrid
+                jcr:primaryType="nt:unstructured"
+                sling:resourceType="wcm/foundation/components/responsivegrid"/>
+        </root>
+        <navigation 
+            jcr:primaryType="nt:unstructured"
+            sling:resourceType="[your-project]/components/navigation"/>
+        <footer 
+            jcr:primaryType="nt:unstructured"
+            sling:resourceType="[your-project]/components/footer"/>
+    </jcr:content>
+</jcr:root>
+```
+
+## 8. ClientLib Categories
+**Path:** `/apps/[your-project]/components/structure/page/clientlibs/.content.xml`
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root xmlns:cq="http://www.day.com/jcr/cq/1.0" 
+          xmlns:jcr="http://www.jcp.org/jcr/1.0"
+    jcr:primaryType="cq:ClientLibraryFolder"
+    categories="[[your-project].spa.page]"
+    dependencies="[[your-project].base,wcm.foundation-main]"/>
+```
+
+## Key Features:
+
+1. **Template Structure**: Defines the basic page template with proper AEM structure
+2. **Navigation Integration**: Uses existing navigation component in header
+3. **Footer Integration**: Uses existing footer component 
+4. **Parsys Container**: Responsive grid in main content area for drag-and-drop
+5. **SPA Integration**: Conditional rendering for edit/preview vs. publish modes
+6. **Policy Configuration**: Allows specific components to be dropped into the parsys
+7. **Accessibility**: Includes skip links and proper semantic HTML
+8. **Responsive**: Uses AEM's responsive grid system
+
+## Setup Instructions:
+
+1. Replace `[your-project]` with your actual project name
+2. Ensure your navigation and footer components exist at the specified paths
+3. Configure the policy to include the components you want to allow in the parsys
+4. Deploy to your AEM instance
+5. The template will be available in the Templates console for page creation
+
+This template provides a solid foundation for AEM React SPA pages with the flexibility to add components via drag-and-drop in the authoring interface.
