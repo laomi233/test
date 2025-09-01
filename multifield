@@ -1,0 +1,114 @@
+<jcr:root
+    xmlns:sling="http://sling.apache.org/jcr/sling/1.0"
+    xmlns:cq="http://www.day.com/jcr/cq/1.0"
+    xmlns:jcr="http://www.jcp.org/jcr/1.0"
+    jcr:primaryType="nt:unstructured"
+    jcr:title="Card List"
+    sling:resourceType="cq/gui/components/authoring/dialog">
+
+  <content jcr:primaryType="nt:unstructured"
+           sling:resourceType="granite/ui/components/coral/foundation/container">
+    <items jcr:primaryType="nt:unstructured">
+      <cards jcr:primaryType="nt:unstructured"
+             sling:resourceType="granite/ui/components/coral/foundation/form/multifield"
+             fieldLabel="Cards"
+             composite="{Boolean}true"
+             name="./items">
+        <field jcr:primaryType="nt:unstructured"
+               sling:resourceType="granite/ui/components/coral/foundation/container">
+          <items jcr:primaryType="nt:unstructured">
+            <title jcr:primaryType="nt:unstructured"
+                   sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                   fieldLabel="Title"
+                   name="./title"/>
+            <desc jcr:primaryType="nt:unstructured"
+                  sling:resourceType="granite/ui/components/coral/foundation/form/textarea"
+                  fieldLabel="Description"
+                  name="./description"/>
+            <link jcr:primaryType="nt:unstructured"
+                  sling:resourceType="granite/ui/components/coral/foundation/form/pathfield"
+                  fieldLabel="Link"
+                  name="./link"/>
+          </items>
+        </field>
+      </cards>
+    </items>
+  </content>
+</jcr:root>
+package com.myproj.core.models;
+
+import com.adobe.cq.export.json.ComponentExporter;
+import com.adobe.cq.export.json.ExporterConstants;
+import org.apache.sling.api.resource.Resource;
+import org.apache.sling.models.annotations.DefaultInjectionStrategy;
+import org.apache.sling.models.annotations.Exporter;
+import org.apache.sling.models.annotations.Model;
+import org.apache.sling.models.annotations.Optional;
+import org.apache.sling.models.annotations.injectorspecific.ChildResource;
+import org.apache.sling.models.annotations.injectorspecific.ValueMapValue;
+
+import java.util.Collections;
+import java.util.List;
+
+@Model(
+    adaptables = Resource.class,
+    adapters = { ComponentExporter.class },
+    resourceType = CardListModel.RESOURCE_TYPE,
+    defaultInjectionStrategy = DefaultInjectionStrategy.OPTIONAL
+)
+@Exporter(
+    name = ExporterConstants.SLING_MODEL_EXPORTER_NAME,   // "jackson"
+    extensions = ExporterConstants.SLING_MODEL_EXTENSION  // "model.json"
+)
+public class CardListModel implements ComponentExporter {
+
+    public static final String RESOURCE_TYPE = "myproj/components/cardlist";
+
+    @ChildResource(name = "items")
+    @Optional
+    private List<CardItem> items;
+
+    public List<CardItem> getItems() {
+        return items != null ? items : Collections.emptyList();
+    }
+
+    @Override
+    public String getExportedType() {
+        return RESOURCE_TYPE;
+    }
+
+    // Child item model maps each multifield entry
+    @Model(adaptables = Resource.class, defaultInjectionStrategy = DefaultInjectionStrategy.OPTIONAL)
+    public static class CardItem {
+        @ValueMapValue private String title;
+        @ValueMapValue private String description;
+        @ValueMapValue private String link;
+
+        public String getTitle() { return title; }
+        public String getDescription() { return description; }
+        public String getLink() { return link; }
+    }
+}
+import React from "react";
+import { MapTo } from "@adobe/aem-react-editable-components";
+
+const isEmpty = (props) => !props || !props.items || props.items.length === 0;
+
+const CardList = (props) => {
+  if (isEmpty(props)) return null;
+
+  return (
+    <div className="card-list">
+      {props.items.map((item, idx) => (
+        <div className="card" key={idx}>
+          <h3>{item.title}</h3>
+          {item.description && <p>{item.description}</p>}
+          {item.link && <a href={item.link}>Learn more</a>}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// Must match the Sling Model resourceType
+export default MapTo("myproj/components/cardlist")(CardList, { isEmpty });
