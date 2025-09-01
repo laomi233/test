@@ -112,3 +112,39 @@ const CardList = (props) => {
 
 // Must match the Sling Model resourceType
 export default MapTo("myproj/components/cardlist")(CardList, { isEmpty });
+
+
+<jcr:root
+    xmlns:sling="http://sling.apache.org/jcr/sling/1.0"
+    xmlns:cq="http://www.day.com/jcr/cq/1.0"
+    xmlns:jcr="http://www.jcp.org/jcr/1.0"
+    jcr:primaryType="nt:unstructured"
+    sling:resourceType="cq/gui/components/authoring/dialog"
+    jcr:title="Card List">
+  <content jcr:primaryType="nt:unstructured"
+           sling:resourceType="granite/ui/components/coral/foundation/container">
+    <items jcr:primaryType="nt:unstructured">
+      <!-- 关键点1：multifield 自身要有 name 且以 ./ 开头 -->
+      <!-- 关键点2：composite=true；field 是一个 container，里面每个子字段都有 ./name -->
+      <items jcr:primaryType="nt:unstructured"
+             sling:resourceType="granite/ui/components/coral/foundation/form/multifield"
+             fieldLabel="Items"
+             name="./items"
+             composite="{Boolean}true">
+        <field jcr:primaryType="nt:unstructured"
+               sling:resourceType="granite/ui/components/coral/foundation/container">
+          <items jcr:primaryType="nt:unstructured">
+            <title jcr:primaryType="nt:unstructured"
+                   sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                   fieldLabel="Title"
+                   name="./title"/>
+            <link jcr:primaryType="nt:unstructured"
+                  sling:resourceType="granite/ui/components/coral/foundation/form/pathfield"
+                  fieldLabel="Link"
+                  name="./link"/>
+          </items>
+        </field>
+      </items>
+    </items>
+  </content>
+</jcr:root>
