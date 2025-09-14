@@ -1,0 +1,301 @@
+import React, { useMemo, useState } from "react";
+import { Converter } from "opencc-js";
+
+/**
+ * 混合模式（保持原始大 JSON + 语言覆盖）完整 Demo
+ * -------------------------------------------------
+ * - baseProps: 一个包含「参数 + 英文文案」的大 JSON（通常从服务器或本地文件来）
+ * - zhOverride: 只包含需要改写成中文的文案字段（结构与 base 对齐的子集）
+ * - getLocaleProps(locale): 返回合并后的 props，参数不被覆盖，只覆盖文案
+ *
+ * 你可以把下面两段 JSON 改成从文件导入：
+ * import baseProps from "./config.json";
+ * import zhOverride from "./locales/zh.json";
+ */
+
+// 1) 模拟一个较复杂的 base JSON：既有文案也有配置参数
+const baseProps = {
+  meta: {
+    id: "demo-card",
+    version: 1,
+  },
+  content: {
+    header: {
+      title: "Welcome to the Demo",
+      subtitle: "This demonstrates the hybrid i18n approach.",
+    },
+    sections: [
+      {
+        key: "features",
+        title: "Key Features",
+        items: [
+          { icon: "⚡", label: "Fast", desc: "Works quickly with minimal setup." },
+          { icon: "🧩", label: "Modular", desc: "Drop-in replacement for your current JSON." },
+          { icon: "🛡️", label: "Safe", desc: "Keeps config separate from translations." },
+        ],
+      },
+      {
+        key: "cta",
+        title: "Get Started",
+        description: "Click the button below to explore.",
+      },
+    ],
+  },
+  config: {
+    theme: "light", // 可切为 "dark"
+    showHeader: true,
+    showFooter: true,
+    layout: {
+      container: "max-w-3xl",
+      cardPadding: "p-6",
+      rounded: "rounded-2xl",
+      shadow: "shadow-xl",
+    },
+  },
+};
+
+// 2) 只包含中文文案覆盖（不包含 config 等逻辑参数）
+const zhOverride = {
+  // 这里故意使用「繁體中文」，稍後演示自動轉為「简体中文」
+  content: {
+    header: {
+      title: "歡迎來到示例",
+      subtitle: "這裡演示混合式國際化覆蓋。",
+    },
+    sections: [
+      {
+        key: "features",
+        title: "核心特性",
+        items: [
+          { label: "快速", desc: "極少改造就能使用。" },
+          { label: "模組化", desc: "可作為你現有 JSON 的替換件。" },
+          { label: "安全", desc: "將配置與翻譯解耦，互不影響。" },
+        ],
+      },
+      {
+        key: "cta",
+        title: "開始使用",
+        description: "點擊下方按鈕繼續探索。",
+      },
+    ],
+  },
+};
+
+/**
+ * 3) 深度合并工具（只覆盖文案，不覆盖 config 等参数）
+ * 规则：
+ * - 对象：递归合并
+ * - 数组：针对含 key 的数组，按 key 归并；否则按索引覆盖（仅当 override 项存在）
+ * - 基本类型：override 若为 string 或 number 或 boolean，则覆盖；否则保留 base
+ */
+function deepMergeContentOnly(base: any, override: any): any {
+  if (override === undefined || override === null) return base;
+
+  // 基本类型直接覆盖（通常是 string 文案）
+  if (typeof base !== "object" || base === null) return override;
+  if (typeof override !== "object" || override === null) return override;
+
+  // 数组：优先按 key 对齐归并
+  if (Array.isArray(base) && Array.isArray(override)) {
+    const byKey = (arr: any[]) =>
+      arr.every((x) => x && typeof x === "object" && "key" in x);
+
+    if (byKey(base) && byKey(override)) {
+      const map = new Map(base.map((x: any) => [x.key, x]));
+      for (const o of override) {
+        if (map.has(o.key)) {
+          map.set(o.key, deepMergeContentOnly(map.get(o.key), o));
+        } else {
+          map.set(o.key, o);
+        }
+      }
+      return Array.from(map.values());
+    }
+
+    // 否则按索引覆盖（override 没提供的索引保留 base）
+    const maxLen = Math.max(base.length, override.length);
+    const merged: any[] = [];
+    for (let i = 0; i < maxLen; i++) {
+      merged[i] = deepMergeContentOnly(base[i], override[i]);
+    }
+    return merged;
+  }
+
+  // 对象：逐字段递归合并
+  const out: any = { ...base };
+  for (const k of Object.keys(override)) {
+    out[k] = deepMergeContentOnly(base[k], override[k]);
+  }
+  return out;
+}
+
+/**
+ * 4) 生成 locale 对应的 props
+ * 仅对 content 字段做覆盖，config 等参数保持 base 不变
+ */
+function mapStringsDeep(input: any, mapFn: (s: string) => string): any {
+  if (input == null) return input;
+  if (typeof input === "string") return mapFn(input);
+  if (Array.isArray(input)) return input.map((x) => mapStringsDeep(x, mapFn));
+  if (typeof input === "object") {
+    const out: any = Array.isArray(input) ? [] : { ...input };
+    for (const k of Object.keys(input)) out[k] = mapStringsDeep((input as any)[k], mapFn);
+    return out;
+  }
+  return input;
+}
+
+// 預先構建繁→簡轉換器
+const toSimplified = Converter({ from: "tw", to: "cn" });
+
+function getLocaleProps(locale: "en" | "zh-Hant" | "zh-Hans") {
+  if (locale === "zh-Hant" || locale === "zh-Hans") {
+    // 先用繁體覆蓋，再按需轉簡體
+    const merged = {
+      ...baseProps,
+      content: deepMergeContentOnly(baseProps.content, zhOverride.content),
+    };
+    if (locale === "zh-Hans") {
+      return {
+        ...merged,
+        content: mapStringsDeep(merged.content, (s) => toSimplified(s)),
+      };
+    }
+    return merged;
+  }
+  return baseProps;
+};
+  }
+  return baseProps;
+}
+
+/** UI 小组件 **/
+function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label?: string }) {
+  return (
+    <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+      <span className="text-sm text-gray-600">{label}</span>
+      <span className={`w-12 h-7 flex items-center ${checked ? "bg-gray-900" : "bg-gray-300"} rounded-full p-1 transition-colors`} onClick={() => onChange(!checked)}>
+        <span className={`bg-white w-5 h-5 rounded-full shadow transform transition-transform ${checked ? "translate-x-5" : "translate-x-0"}`} />
+      </span>
+    </label>
+  );
+}
+
+function Section({ title, children }: { title: string; children?: React.ReactNode }) {
+  return (
+    <section className="mt-6">
+      <h3 className="text-lg font-semibold mb-2">{title}</h3>
+      <div className="space-y-2 text-gray-700">{children}</div>
+    </section>
+  );
+}
+
+function FeatureItem({ icon, label, desc }: { icon: string; label: string; desc: string }) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className="text-2xl leading-none">{icon}</div>
+      <div>
+        <div className="font-medium">{label}</div>
+        <div className="text-sm text-gray-600">{desc}</div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 5) 目标组件：接受混合后的 props
+ */
+function HybridCard(props: typeof baseProps) {
+  const { content, config } = props;
+  const { layout, theme, showHeader, showFooter } = config;
+
+  return (
+    <div className={`${theme === "dark" ? "bg-gray-950 text-white" : "bg-gray-50 text-gray-900"} min-h-screen py-10`}> 
+      <div className={`${layout.container} mx-auto px-4`}>
+        <div className={`bg-white ${layout.cardPadding} ${layout.rounded} ${layout.shadow} ${theme === "dark" ? "bg-gray-900 text-white" : "bg-white"}`}>
+          {showHeader && (
+            <header className="mb-4">
+              <h1 className="text-2xl font-bold">{content.header.title}</h1>
+              <p className="text-gray-600 dark:text-gray-300">{content.header.subtitle}</p>
+            </header>
+          )}
+
+          {content.sections.map((sec: any) => (
+            <Section key={sec.key} title={sec.title}>
+              {sec.items && sec.items.map((it: any, idx: number) => (
+                <FeatureItem key={idx} icon={it.icon ?? "•"} label={it.label} desc={it.desc} />
+              ))}
+              {sec.description && <p>{sec.description}</p>}
+              {sec.key === "cta" && (
+                <button className="mt-2 inline-flex items-center justify-center rounded-xl px-4 py-2 bg-gray-900 text-white hover:opacity-90 active:opacity-80">
+                  {sec.buttonLabel ?? "Continue"}
+                </button>
+              )}
+            </Section>
+          ))}
+
+          {showFooter && (
+            <footer className="mt-8 pt-4 border-t border-gray-200 text-sm text-gray-500">
+              id: {props.meta.id} · v{props.meta.version} · theme: {theme}
+            </footer>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 6) Demo 容器：切换中英文观察覆盖效果；演示 theme/config 未被覆盖
+ */
+export default function App() {
+  const [useZh, setUseZh] = useState(true);        // 是否使用中文（繁/简）
+  const [useHans, setUseHans] = useState(true);    // 中文时是否用简体
+  const [dark, setDark] = useState(false);
+
+  const props = useMemo(() => {
+    const locale = useZh ? (useHans ? "zh-Hans" : "zh-Hant") : ("en" as const);
+    const p = getLocaleProps(locale);
+    return {
+      ...p,
+      config: {
+        ...p.config,
+        theme: dark ? "dark" : "light",
+      },
+    };
+  }, [useZh, useHans, dark]);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200">
+      <div className="max-w-5xl mx-auto px-4 py-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">Hybrid i18n Props Merge Demo（繁→简自動轉換）</h2>
+          <div className="flex items-center gap-4">
+            <Toggle checked={useZh} onChange={setUseZh} label="中文" />
+            {useZh && <Toggle checked={useHans} onChange={setUseHans} label="繁→简" />}
+            <Toggle checked={dark} onChange={setDark} label="Dark" />
+          </div>
+        </div>
+        <HybridCard {...props} />
+      </div>
+    </div>
+  );
+},
+    };
+  }, [zh, dark]);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200">
+      <div className="max-w-5xl mx-auto px-4 py-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">Hybrid i18n Props Merge Demo</h2>
+          <div className="flex items-center gap-4">
+            <Toggle checked={zh} onChange={setZh} label="中文" />
+            <Toggle checked={dark} onChange={setDark} label="Dark" />
+          </div>
+        </div>
+        <HybridCard {...props} />
+      </div>
+    </div>
+  );
+}

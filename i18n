@@ -1,0 +1,248 @@
+在AEM SPA React项目中配置i18n需要结合AEM的国际化机制和React的前端国际化方案。以下是详细的配置步骤：
+
+## 1. AEM后端i18n配置
+
+### 创建翻译字典
+在AEM中创建翻译字典文件：
+- 路径：`/apps/your-project/i18n`
+- 创建不同语言的字典文件：
+  - `en.json` (英语)
+  - `zh.json` (中文)
+  - `es.json` (西班牙语)
+
+示例字典文件结构：
+```json
+// en.json
+{
+  "welcome.message": "Welcome to our website",
+  "button.submit": "Submit",
+  "navigation.home": "Home"
+}
+
+// zh.json
+{
+  "welcome.message": "欢迎访问我们的网站",
+  "button.submit": "提交",
+  "navigation.home": "首页"
+}
+```
+
+### 配置Sling i18n
+在AEM中创建Sling i18n配置：
+```xml
+<!-- /apps/your-project/config/org.apache.sling.i18n.impl.JcrResourceBundleProvider-your-project.xml -->
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root xmlns:sling="http://sling.apache.org/jcr/1.0" xmlns:jcr="http://www.w3.org/2001/jcr-mix/1.0"
+    jcr:primaryType="sling:OsgiConfig"
+    service.ranking="{Long}1000"
+    locale.default="en"
+    preload.bundles="{Boolean}true"/>
+```
+
+## 2. React前端i18n配置
+
+### 安装必要的依赖
+```bash
+npm install react-i18next i18next i18next-browser-languagedetector i18next-http-backend
+```
+
+### 创建i18n配置文件
+创建 `src/utils/i18n.js`：
+
+```javascript
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+import LanguageDetector from 'i18next-browser-languagedetector';
+import HttpApi from 'i18next-http-backend';
+
+i18n
+  .use(HttpApi)
+  .use(LanguageDetector)
+  .use(initReactI18next)
+  .init({
+    fallbackLng: 'en',
+    debug: process.env.NODE_ENV === 'development',
+    
+    // AEM特定配置
+    backend: {
+      loadPath: '/content/your-project/{{lng}}/jcr:content/dictionary.model.json',
+      // 或者使用自定义API端点
+      // loadPath: '/bin/api/i18n/{{lng}}'
+    },
+
+    detection: {
+      order: ['path', 'cookie', 'htmlTag', 'localStorage', 'navigator'],
+      lookupFromPathIndex: 2, // /content/your-project/en/... 中的索引
+      caches: ['localStorage', 'cookie'],
+    },
+
+    interpolation: {
+      escapeValue: false,
+    },
+
+    react: {
+      useSuspense: false,
+    },
+  });
+
+export default i18n;
+```
+
+### 在主应用中初始化i18n
+在你的主应用文件（通常是 `src/index.js` 或 `App.js`）中：
+
+```javascript
+import React from 'react';
+import ReactDOM from 'react-dom';
+import './utils/i18n'; // 导入i18n配置
+import App from './App';
+
+ReactDOM.render(<App />, document.getElementById('root'));
+```
+
+## 3. 创建AEM i18n API端点
+
+创建一个Servlet来提供翻译数据给前端：
+
+```java
+@Component(service = Servlet.class,
+           property = {
+               "sling.servlet.paths=/bin/api/i18n",
+               "sling.servlet.methods=GET"
+           })
+public class I18nApiServlet extends SlingSafeMethodsServlet {
+
+    @Reference
+    private ResourceBundleProvider resourceBundleProvider;
+
+    @Override
+    protected void doGet(SlingHttpServletRequest request, 
+                        SlingHttpServletResponse response) throws IOException {
+        
+        String language = request.getParameter("lng");
+        if (language == null) {
+            language = "en";
+        }
+
+        Locale locale = new Locale(language);
+        ResourceBundle bundle = resourceBundleProvider.getResourceBundle(locale, request);
+        
+        JSONObject translations = new JSONObject();
+        
+        if (bundle != null) {
+            Enumeration<String> keys = bundle.getKeys();
+            while (keys.hasMoreElements()) {
+                String key = keys.nextElement();
+                try {
+                    translations.put(key, bundle.getString(key));
+                } catch (Exception e) {
+                    // 处理异常
+                }
+            }
+        }
+
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        response.getWriter().write(translations.toString());
+    }
+}
+```
+
+## 4. 在React组件中使用i18n
+
+### 使用Hook方式
+```javascript
+import React from 'react';
+import { useTranslation } from 'react-i18next';
+
+const WelcomeComponent = () => {
+    const { t, i18n } = useTranslation();
+
+    const changeLanguage = (lng) => {
+        i18n.changeLanguage(lng);
+    };
+
+    return (
+        <div>
+            <h1>{t('welcome.message')}</h1>
+            <button onClick={() => changeLanguage('en')}>English</button>
+            <button onClick={() => changeLanguage('zh')}>中文</button>
+            <button>{t('button.submit')}</button>
+        </div>
+    );
+};
+
+export default WelcomeComponent;
+```
+
+### 使用HOC方式
+```javascript
+import React from 'react';
+import { withTranslation } from 'react-i18next';
+
+class WelcomeComponent extends React.Component {
+    render() {
+        const { t } = this.props;
+        
+        return (
+            <div>
+                <h1>{t('welcome.message')}</h1>
+                <button>{t('button.submit')}</button>
+            </div>
+        );
+    }
+}
+
+export default withTranslation()(WelcomeComponent);
+```
+
+## 5. AEM页面级别的语言检测
+
+在AEM页面组件中设置语言信息：
+
+```javascript
+// 在页面组件的客户端库中
+window.siteLanguage = '${currentPage.language.language}';
+
+// 或者通过data属性
+document.documentElement.setAttribute('data-locale', '${currentPage.language.language}');
+```
+
+然后在React中读取：
+
+```javascript
+// 在i18n配置中
+const getPageLanguage = () => {
+    return window.siteLanguage || 
+           document.documentElement.getAttribute('data-locale') || 
+           'en';
+};
+
+i18n.init({
+    lng: getPageLanguage(),
+    // 其他配置...
+});
+```
+
+## 6. 处理AEM作者模式
+
+在AEM作者环境中，你可能需要特殊处理：
+
+```javascript
+// 检测是否在AEM作者模式
+const isAuthorMode = () => {
+    return window.Granite && window.Granite.author;
+};
+
+// 在i18n配置中添加
+if (isAuthorMode()) {
+    i18n.init({
+        // 作者模式的特殊配置
+        debug: true,
+        saveMissing: true,
+        // 可能需要不同的后端配置
+    });
+}
+```
+
+这样配置后，你的AEM SPA React项目就可以正确使用国际化功能了。翻译内容会从AEM后端获取，React前端会根据当前语言环境自动显示对应的翻译文本。
