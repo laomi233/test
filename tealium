@@ -1,0 +1,214 @@
+# React + AEM SPA + Tealium：JS 文件实现按 URL 层级生成 `page_name` 并在路由变化上报
+
+> 目标：在 React SPA（运行在 AEM 环境中）里，用户访问任意页面或发生路由变化时，调用 `utag.view`，并把 URL 路径切段用冒号拼接成 `page_name`（示例：`pws:hsi:aem:esg`）。
+
+---
+
+## 目录结构建议
+
+```
+src/
+  analytics/
+    tealium.js              # utag 队列兜底 + flush
+    pageName.js             # 根据 URL 生成 page_name（冒号拼接）
+    useTealiumPageView.js   # React Hook：监听路由变化并上报
+  app/
+    App.js                  # 应用入口（在此调用 flush + Hook）
+```
+
+---
+
+## 1) 在 AEM 中加载 Tealium（utag.js）
+
+在 AEM 的 page component `<head>` 部分，或通过 ClientLib 注入：
+
+```html
+<script type="text/javascript">
+  (function(a,b,c,d){
+    a='//tags.tiqcdn.com/utag/<your-account>/<your-profile>/<env>/utag.js';
+    b=document; c='script'; d=b.createElement(c); d.src=a; d.type='text/javascript'; d.async=true;
+    a=b.getElementsByTagName(c)[0]; a.parentNode.insertBefore(d,a);
+  })();
+</script>
+```
+
+> 替换 `<your-account>/<your-profile>/<env>` 为你在 Tealium iQ 中的配置。
+
+---
+
+## 2) `src/analytics/tealium.js`
+
+```js
+// src/analytics/tealium.js
+
+export function tealiumView(data) {
+  if (window.utag && typeof window.utag.view === 'function') {
+    window.utag.view(data);
+  } else {
+    window.__tlq__ = window.__tlq__ || [];
+    window.__tlq__.push(data);
+  }
+}
+
+export function flushTealiumQueueWhenReady(intervalMs = 200) {
+  const timer = setInterval(() => {
+    if (window.utag && typeof window.utag.view === 'function') {
+      if (window.__tlq__ && window.__tlq__.length) {
+        window.__tlq__.forEach(d => window.utag.view(d));
+        window.__tlq__ = [];
+      }
+      clearInterval(timer);
+    }
+  }, intervalMs);
+}
+```
+
+---
+
+## 3) `src/analytics/pageName.js`
+
+```js
+// src/analytics/pageName.js
+
+export function getPageNameFromUrl(pathLike = window.location.pathname, opts = {}) {
+  const {
+    homeName = 'home',
+    stripFileExt = true,
+    normalizeCase = 'lower',
+    keepLocalePrefix = true,
+  } = opts;
+
+  let pathname;
+  try {
+    const u = new URL(pathLike, window.location.origin);
+    pathname = u.pathname || '/';
+  } catch {
+    pathname = (pathLike.split('?')[0] || '').split('#')[0] || '/';
+  }
+
+  if (pathname.length > 1 && pathname.endsWith('/')) pathname = pathname.slice(0, -1);
+
+  if (stripFileExt) {
+    pathname = pathname.replace(/\/(?:index)(?:\.(?:html?|php))?$/i, '') || '/';
+    pathname = pathname.replace(/\.(html?|php)$/i, '');
+    if (pathname === '') pathname = '/';
+  }
+
+  let segs = pathname.split('/').filter(Boolean);
+
+  if (!keepLocalePrefix && segs.length > 0) {
+    const langLike = segs[0];
+    if (/^[a-z]{2}(?:-[a-z]{2})?$/i.test(langLike)) {
+      segs = segs.slice(1);
+    }
+  }
+
+  if (segs.length === 0) segs = [homeName];
+
+  segs = segs.map(s => {
+    try { s = decodeURIComponent(s); } catch {}
+    if (normalizeCase === 'lower') return s.toLowerCase();
+    if (normalizeCase === 'upper') return s.toUpperCase();
+    return s;
+  });
+
+  return segs.join(':');
+}
+```
+
+---
+
+## 4) `src/analytics/useTealiumPageView.js`
+
+```js
+// src/analytics/useTealiumPageView.js
+import { useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
+import { tealiumView } from './tealium';
+import { getPageNameFromUrl } from './pageName';
+
+export default function useTealiumPageView() {
+  const location = useLocation();
+  const lastPath = useRef('');
+
+  useEffect(() => {
+    const path = location.pathname + location.search + location.hash;
+    if (path === lastPath.current) return;
+    lastPath.current = path;
+
+    const pageName = getPageNameFromUrl(location.pathname, {
+      homeName: 'home',
+      stripFileExt: true,
+      normalizeCase: 'lower',
+      keepLocalePrefix: true,
+    });
+
+    tealiumView({
+      event: 'page_view',
+      page_name: pageName,
+      page_path: location.pathname,
+      referrer: document.referrer || '',
+    });
+  }, [location.pathname, location.search, location.hash]);
+}
+```
+
+---
+
+## 5) `src/app/App.js`
+
+```js
+// src/app/App.js
+import { useEffect } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import useTealiumPageView from '../analytics/useTealiumPageView';
+import { flushTealiumQueueWhenReady } from '../analytics/tealium';
+
+function Pages() {
+  useTealiumPageView();
+  return (
+    <Routes>
+      <Route path="/" element={<div>Home</div>} />
+      <Route path="/pws/hsi/aem/esg" element={<div>ESG</div>} />
+    </Routes>
+  );
+}
+
+export default function App() {
+  useEffect(() => {
+    flushTealiumQueueWhenReady();
+  }, []);
+
+  return (
+    <BrowserRouter>
+      <Pages />
+    </BrowserRouter>
+  );
+}
+```
+
+---
+
+## 6) Tealium iQ 配置
+
+* 在 Data Layer 中新增变量：`page_name`、`page_path`、`event`。
+* 在供应商 Tag（如 GA4）里将 `page_name` 映射到对应字段。
+* SPA 场景必须用 `utag.view()` 触发页面浏览。
+
+---
+
+## 7) 自测
+
+在浏览器控制台：
+
+```js
+// 看 URL 转换结果
+getPageNameFromUrl(location.pathname, { normalizeCase: 'lower', keepLocalePrefix: true });
+
+// 手动触发
+window.utag?.view && utag.view({ page_name: 'debug:manual' });
+```
+
+---
+
+✅ 这样，你就有了一整套 **React + AEM SPA 的 JS 实现**，直接放进工程里即可用。
