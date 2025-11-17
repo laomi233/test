@@ -1,122 +1,130 @@
-.performance-table-wrapper {
-    width: 100%;
-    margin-top: 20px;
-  }
-  
-  .performance-title {
-    font-size: 24px;
-    font-weight: 600;
-    margin-bottom: 20px;
-  }
-  
-  .performance-table {
-    width: 100%;
-    border-collapse: collapse;
-    table-layout: fixed;
-  }
-  
-  .performance-table th {
-    text-align: left;
-    font-size: 13px;
-    color: rgba(0, 0, 0, 0.35);
-    font-weight: 400;
-    padding-bottom: 14px;
-  }
-  
-  .performance-table td {
-    padding: 14px 0;
-    font-size: 16px;
-    color: #111;
-  }
-  
-  /* 第一列：指数名称 */
-  .performance-table .col-name {
-    font-weight: 600;
-  }
-  
-  /* 红色下降变化 */
-  .performance-table .down {
-    color: #e85959;
-    font-weight: 500;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  
-  /* 小箭头（↓） */
-  .performance-table .down::before {
-    content: "↓";
-    font-size: 14px;
-  }
-  
-  /* 更新时间列 */
-  .performance-table .last-update {
-    color: rgba(0, 0, 0, 0.65);
-    font-size: 14px;
-    white-space: nowrap;
-  }
-  
-  /* 每列拉宽（根据图像推测 spacing） */
-  .performance-table th,
-  .performance-table td {
-    padding-right: 60px;
-  }
-  import "./CustomTable.css";
+import React from "react";
+import { MapTo, withModel } from "@adobe/aem-react-editable-components";
+import "./PerformanceTable.css";
 
-  const CustomTable = ({ table }) => {
-    if (!table || !table.rows) return null;
-  
-    const header = table.header || [];
-    const rows = table.rows;
-  
+const PerformanceTable = (props) => {
+  const { headers = [], rows = [] } = props;
+
+  const isEmpty =
+    (!headers || headers.length === 0) &&
+    (!rows || rows.length === 0);
+
+  if (isEmpty) {
     return (
-      <div className="performance-table-wrapper">
-        <h2 className="performance-title">Performance</h2>
-  
-        <table className="performance-table">
-          <thead>
-            <tr>
-              {header.map((h, i) => (
-                <th key={i}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-  
-          <tbody>
-            {rows.map((row, rowIndex) => (
-              <tr key={rowIndex}>
-                {row.map((cell, cellIndex) => {
-                  // 自动判断下跌数值
-                  const isDown =
-                    typeof cell === "string" &&
-                    (cell.startsWith("-") || cell.includes("↓"));
-  
-                  const isLastUpdate = cellIndex === row.length - 1;
-  
+      <div className="performance-table performance-table--placeholder">
+        Performance Table: no data configured.
+      </div>
+    );
+  }
+
+  return (
+    <div className="performance-table">
+      <h2 className="performance-table__title">Performance</h2>
+
+      <table className="performance-table__table">
+        <thead>
+          <tr>
+            {headers.map((h, index) => (
+              <th key={index} className="performance-table__th">
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+
+        <tbody>
+          {rows.map((row, rIdx) => (
+            <tr key={rIdx} className="performance-table__row">
+              {row.cells &&
+                row.cells.map((cell, cIdx) => {
+                  const text = cell || "";
+                  const isNegative =
+                    text.includes("↓") ||
+                    text.startsWith("-");
+
+                  const cellClassNames =
+                    "performance-table__cell" +
+                    (cIdx === 0
+                      ? " performance-table__cell--index"
+                      : "") +
+                    (isNegative
+                      ? " performance-table__cell--negative"
+                      : "");
+
                   return (
-                    <td
-                      key={cellIndex}
-                      className={
-                        cellIndex === 0
-                          ? "col-name"
-                          : isDown
-                          ? "down"
-                          : isLastUpdate
-                          ? "last-update"
-                          : ""
-                      }
-                    >
-                      {cell}
+                    <td key={cIdx} className={cellClassNames}>
+                      {text}
                     </td>
                   );
                 })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
-  };
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+// SPA Editor edit config
+const PerformanceTableEditConfig = {
+  emptyLabel: "Performance Table",
+  isEmpty: (props) =>
+    !props ||
+    ((!props.headers || props.headers.length === 0) &&
+      (!props.rows || props.rows.length === 0)),
+};
+
+export default MapTo("mysite/components/content/performance-table")(
+  withModel(PerformanceTable),
+  PerformanceTableEditConfig
+);
+.performance-table {
+    font-family: Arial, sans-serif;
+    padding: 16px 0;
+  }
   
-  export default CustomTable;
-    
+  .performance-table__title {
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+  
+  .performance-table__table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  .performance-table__th,
+  .performance-table__cell {
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+  }
+  
+  .performance-table__th {
+    font-weight: 600;
+    color: #999;
+  }
+  
+  .performance-table__cell--index {
+    font-weight: 500;
+    color: #333;
+  }
+  
+  .performance-table__cell--negative {
+    color: #e55353;
+  }
+  
+  .performance-table__row:hover {
+    background-color: #fafafa;
+  }
+  
+  .performance-table--placeholder {
+    border: 1px dashed #ccc;
+    padding: 16px;
+    color: #999;
+    text-align: center;
+    font-size: 14px;
+  }
+  

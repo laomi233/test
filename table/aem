@@ -1,335 +1,193 @@
-package com.myproject.core.models;
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root
+    xmlns:sling="http://sling.apache.org/jcr/sling/1.0"
+    xmlns:cq="http://www.day.com/jcr/cq/1.0"
+    xmlns:jcr="http://www.jcp.org/jcr/1.0"
+    jcr:primaryType="cq:Component"
+    jcr:title="Performance Table"
+    sling:resourceSuperType="core/wcm/components/core-component"
+    componentGroup="MySite - Content"/>
 
-import com.adobe.cq.export.json.ComponentExporter;
-import com.adobe.cq.export.json.ExporterConstants;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.commons.lang3.StringUtils;
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root
+    xmlns:sling="http://sling.apache.org/jcr/sling/1.0"
+    xmlns:cq="http://www.day.com/jcr/cq/1.0"
+    xmlns:jcr="http://www.jcp.org/jcr/1.0"
+    jcr:primaryType="nt:unstructured"
+    jcr:title="Performance Table"
+    sling:resourceType="cq/gui/components/authoring/dialog">
+
+    <content
+        jcr:primaryType="nt:unstructured"
+        sling:resourceType="granite/ui/components/coral/foundation/fixedcolumns">
+
+        <items jcr:primaryType="nt:unstructured">
+            <column
+                jcr:primaryType="nt:unstructured"
+                sling:resourceType="granite/ui/components/coral/foundation/container">
+
+                <items jcr:primaryType="nt:unstructured">
+
+                    <!-- 表头 -->
+                    <headers
+                        jcr:primaryType="nt:unstructured"
+                        sling:resourceType="granite/ui/components/coral/foundation/form/multifield"
+                        fieldLabel="Headers"
+                        fieldDescription="Add column headers"
+                        composite="{Boolean}false"
+                        name="./headers">
+                        <field
+                            jcr:primaryType="nt:unstructured"
+                            sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                            name="./header"
+                            emptyText="Header text"/>
+                    </headers>
+
+                    <!-- 表格行（每行是 composite） -->
+                    <rows
+                        jcr:primaryType="nt:unstructured"
+                        sling:resourceType="granite/ui/components/coral/foundation/form/multifield"
+                        fieldLabel="Rows"
+                        fieldDescription="Add table rows"
+                        composite="{Boolean}true"
+                        name="./rows">
+
+                        <field
+                            jcr:primaryType="nt:unstructured"
+                            sling:resourceType="granite/ui/components/coral/foundation/container">
+                            <items jcr:primaryType="nt:unstructured">
+
+                                <!-- 可选：行标识/左侧第一列（比如 Index 名称） -->
+                                <rowLabel
+                                    jcr:primaryType="nt:unstructured"
+                                    sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                                    fieldLabel="Row label (first cell)"
+                                    name="./rowLabel"
+                                    emptyText="e.g. Hang Seng Index"/>
+
+                                <!-- cells multifield：这一行的所有 cell（包括第一列或仅右侧列都行） -->
+                                <cells
+                                    jcr:primaryType="nt:unstructured"
+                                    sling:resourceType="granite/ui/components/coral/foundation/form/multifield"
+                                    fieldLabel="Cells"
+                                    fieldDescription="Add cells for this row"
+                                    composite="{Boolean}false"
+                                    name="./cells">
+                                    <field
+                                        jcr:primaryType="nt:unstructured"
+                                        sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                                        name="./cell"
+                                        emptyText="Cell value"/>
+                                </cells>
+
+                            </items>
+                        </field>
+                    </rows>
+
+                </items>
+            </column>
+        </items>
+    </content>
+</jcr:root>
+
+package com.mysite.core.models;
+
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.models.annotations.DefaultInjectionStrategy;
 import org.apache.sling.models.annotations.Exporter;
 import org.apache.sling.models.annotations.Model;
-import org.apache.sling.models.annotations.injectorspecific.Inject;
-import org.apache.sling.models.annotations.injectorspecific.Named;
+import org.apache.sling.models.annotations.injectorspecific.ChildResource;
 
-import java.io.IOException;
+import javax.annotation.PostConstruct;
 import java.util.ArrayList;
 import java.util.List;
 
 @Model(
-        adaptables = {Resource.class},
-        adapters = {CustomTableModel.class, ComponentExporter.class},
-        resourceType = CustomTableModel.RESOURCE_TYPE,
+        adaptables = Resource.class,
+        adapters = PerformanceTableModel.class,
+        resourceType = "mysite/components/content/performance-table",
         defaultInjectionStrategy = DefaultInjectionStrategy.OPTIONAL
 )
-@Exporter(
-        name = ExporterConstants.SLING_MODEL_EXPORTER_NAME,
-        extensions = ExporterConstants.SLING_MODEL_EXTENSION // "model.json"
-)
-public class CustomTableModel implements ComponentExporter {
+@Exporter(name = "jackson", extensions = "json")
+public class PerformanceTableModel {
 
-    protected static final String RESOURCE_TYPE = "myproject/components/content/custom-table";
+    @ChildResource(name = "headers")
+    private List<Resource> headerResources;
 
-    @Inject
-    @Named("title")
-    private String title;
+    @ChildResource(name = "rows")
+    private List<Resource> rowResources;
 
-    @Inject
-    @Named("tableJson")
-    private String tableJson;
+    private List<String> headers;
+    private List<Row> rows;
 
-    private TableData tableData;
+    @PostConstruct
+    protected void init() {
+        headers = new ArrayList<>();
+        rows = new ArrayList<>();
 
-    public String getTitle() {
-        return title;
+        // 处理 headers multifield
+        if (headerResources != null) {
+            for (Resource r : headerResources) {
+                String header = r.getValueMap().get("header", String.class);
+                if (header != null && !header.isEmpty()) {
+                    headers.add(header);
+                }
+            }
+        }
+
+        // 处理 rows + cells multifield
+        if (rowResources != null) {
+            for (Resource r : rowResources) {
+                Row row = new Row();
+
+                String rowLabel = r.getValueMap().get("rowLabel", String.class);
+                row.setRowLabel(rowLabel);
+
+                List<String> cells = new ArrayList<>();
+                Resource cellsRes = r.getChild("cells");
+                if (cellsRes != null) {
+                    for (Resource c : cellsRes.getChildren()) {
+                        String cellText = c.getValueMap().get("cell", String.class);
+                        if (cellText != null) {
+                            cells.add(cellText);
+                        }
+                    }
+                }
+
+                row.setCells(cells);
+                rows.add(row);
+            }
+        }
     }
 
-    /**
-     * React 端会通过 props.table 拿到这个对象
-     */
-    public TableData getTable() {
-        if (tableData == null) {
-            tableData = parseTableJson(tableJson);
-        }
-        return tableData;
+    // getters 给 React 用
+    public List<String> getHeaders() {
+        return headers;
     }
 
-    private TableData parseTableJson(String json) {
-        TableData empty = new TableData();
-        if (StringUtils.isBlank(json)) {
-            return empty;
-        }
-
-        ObjectMapper mapper = new ObjectMapper();
-        try {
-            return mapper.readValue(json, TableData.class);
-        } catch (IOException e) {
-            // 解析失败时避免整个 model 挂掉，返回空结构
-            return empty;
-        }
+    public List<Row> getRows() {
+        return rows;
     }
 
-    @Override
-    public String getExportedType() {
-        return RESOURCE_TYPE;
-    }
+    // 内部 Row 类型，对应 JSON 中 rows 数组里的每一项
+    public static class Row {
+        private String rowLabel;
+        private List<String> cells;
 
-    // 内部类：和前端期望的结构一致
-    public static class TableData {
-        private List<String> header = new ArrayList<>();
-        private List<List<String>> rows = new ArrayList<>();
-
-        public List<String> getHeader() {
-            return header;
+        public String getRowLabel() {
+            return rowLabel;
         }
 
-        public void setHeader(List<String> header) {
-            this.header = header;
+        public void setRowLabel(String rowLabel) {
+            this.rowLabel = rowLabel;
         }
 
-        public List<List<String>> getRows() {
-            return rows;
+        public List<String> getCells() {
+            return cells;
         }
 
-        public void setRows(List<List<String>> rows) {
-            this.rows = rows;
+        public void setCells(List<String> cells) {
+            this.cells = cells;
         }
     }
 }
-<?xml version="1.0" encoding="UTF-8"?>
-<jcr:root
-    xmlns:sling="http://sling.apache.org/jcr/sling/1.0"
-    xmlns:cq="http://www.day.com/jcr/cq/1.0"
-    xmlns:jcr="http://www.jcp.org/jcr/1.0"
-    jcr:primaryType="nt:unstructured"
-    jcr:title="Custom Table"
-    sling:resourceType="cq/gui/components/authoring/dialog"
-    extraClientlibs="[myproject.customtable.editor]">
-
-    <content
-        jcr:primaryType="nt:unstructured"
-        sling:resourceType="granite/ui/components/coral/foundation/container">
-        <items jcr:primaryType="nt:unstructured">
-
-            <!-- 标题 -->
-            <title
-                jcr:primaryType="nt:unstructured"
-                sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
-                fieldLabel="Title"
-                name="./title"/>
-
-            <!-- 表格 JSON: 真正提交的字段（被隐藏） -->
-            <tableJson
-                jcr:primaryType="nt:unstructured"
-                sling:resourceType="granite/ui/components/coral/foundation/form/textarea"
-                fieldLabel="Table Data (internal JSON)"
-                name="./tableJson"
-                rows="3"
-                granite:class="cq-customtable-json"
-                renderReadOnly="true"/>
-
-            <!-- 用于渲染 Excel 风格表格的占位容器 -->
-            <tableEditor
-                jcr:primaryType="nt:unstructured"
-                sling:resourceType="granite/ui/components/coral/foundation/html"
-                tagName="div"
-                text=""
-                granite:class="cq-customtable-editor"/>
-        </items>
-    </content>
-</jcr:root>
-/apps/myproject/components/content/custom-table/clientlibs/editor
-  ├─ js
-  │   └─ table-editor.js
-  ├─ css
-  │   └─ table-editor.css (可选)
-  └─ .content.xml
-<?xml version="1.0" encoding="UTF-8"?>
-<jcr:root
-    xmlns:jcr="http://www.jcp.org/jcr/1.0"
-    xmlns:nt="http://www.jcp.org/jcr/nt/1.0"
-    jcr:primaryType="cq:ClientLibraryFolder"
-    categories="[myproject.customtable.editor]"
-    jsProcessor="[default:none,min:none]"
-    cssProcessor="[default:none,min:none]"/>
-(function (document, $) {
-  "use strict";
-
-  // AEM dialog 打开时事件
-  $(document).on("dialog-ready", function () {
-    var $jsonField = $(".cq-customtable-json textarea, textarea.cq-customtable-json");
-    if ($jsonField.length === 0) {
-      return;
-    }
-
-    var $container = $(".cq-customtable-editor");
-    if ($container.length === 0) {
-      return;
-    }
-
-    // 隐藏原 textarea
-    $jsonField.closest(".coral-Form-fieldwrapper").hide();
-
-    // 读取原 JSON
-    var raw = $jsonField.val();
-    var data;
-    try {
-      data = raw ? JSON.parse(raw) : null;
-    } catch (e) {
-      data = null;
-    }
-
-    if (!data || !Array.isArray(data.header)) {
-      // 初始化一个默认结构
-      data = {
-        header: ["Index", "Index Value", "Point Change", "% Change", "Today High", "Today Low", "Previous Close", "Last update (dd-mm-yyyy hh:mm)"],
-        rows: [
-          ["", "", "", "", "", "", "", ""]
-        ]
-      };
-    }
-
-    // 创建 HTML
-    var $table = $('<table class="cq-customtable-table"></table>');
-    var $thead = $("<thead></thead>");
-    var $tbody = $("<tbody></tbody>");
-    var $btnAddRow = $('<button type="button" class="cq-customtable-addrow">Add row</button>');
-
-    // 渲染表头
-    var $trHead = $("<tr></tr>");
-    data.header.forEach(function (h, colIndex) {
-      var $th = $("<th></th>");
-      var $input = $('<input type="text" class="cq-customtable-input-header">')
-        .val(h)
-        .attr("data-col", colIndex);
-      $th.append($input);
-      $trHead.append($th);
-    });
-    $thead.append($trHead);
-
-    // 渲染内容行
-    function renderRows() {
-      $tbody.empty();
-      data.rows.forEach(function (row, rowIndex) {
-        var $tr = $("<tr></tr>");
-        row.forEach(function (cell, colIndex) {
-          var $td = $("<td></td>");
-          var $input = $('<input type="text" class="cq-customtable-input-cell">')
-            .val(cell)
-            .attr("data-row", rowIndex)
-            .attr("data-col", colIndex);
-          $td.append($input);
-          $tr.append($td);
-        });
-        $tbody.append($tr);
-      });
-    }
-
-    renderRows();
-
-    $btnAddRow.on("click", function () {
-      var cols = data.header.length;
-      var newRow = [];
-      for (var i = 0; i < cols; i++) {
-        newRow.push("");
-      }
-      data.rows.push(newRow);
-      renderRows();
-    });
-
-    $table.append($thead).append($tbody);
-    $container.empty().append($table).append($btnAddRow);
-
-    // 对话框提交前，把表格内容同步回 textarea
-    $(document).on("click", ".cq-dialog-submit", function () {
-      // 更新 header
-      $thead.find("input.cq-customtable-input-header").each(function () {
-        var col = parseInt($(this).attr("data-col"), 10);
-        data.header[col] = $(this).val();
-      });
-
-      // 更新 rows
-      data.rows = [];
-      $tbody.find("tr").each(function (rowIndex) {
-        var rowValues = [];
-        $(this)
-          .find("input.cq-customtable-input-cell")
-          .each(function (colIndex) {
-            rowValues[colIndex] = $(this).val();
-          });
-        data.rows.push(rowValues);
-      });
-
-      $jsonField.val(JSON.stringify(data));
-    });
-  });
-})(document, Granite.$);
-.cq-customtable-table {
-  border-collapse: collapse;
-  width: 100%;
-  margin-top: 10px;
-}
-
-.cq-customtable-table th,
-.cq-customtable-table td {
-  border: 1px solid #dcdcdc;
-  padding: 4px;
-}
-
-.cq-customtable-table input {
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.cq-customtable-addrow {
-  margin-top: 8px;
-}
-<?xml version="1.0" encoding="UTF-8"?>
-<jcr:root
-    xmlns:sling="http://sling.apache.org/jcr/sling/1.0"
-    xmlns:cq="http://www.day.com/jcr/cq/1.0"
-    xmlns:jcr="http://www.jcp.org/jcr/1.0"
-    jcr:primaryType="nt:unstructured"
-    jcr:title="Custom Table"
-    sling:resourceType="cq/gui/components/authoring/dialog"
-    extraClientlibs="[myproject.customtable.editor]">
-
-    <content
-        jcr:primaryType="nt:unstructured"
-        sling:resourceType="granite/ui/components/coral/foundation/container">
-        <items jcr:primaryType="nt:unstructured">
-
-            <!-- 标题（必填） -->
-            <title
-                jcr:primaryType="nt:unstructured"
-                sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
-                fieldLabel="Title"
-                name="./title"
-                required="{Boolean}true"
-                emptyText="例如：Performance"/>
-
-            <!-- 内部 JSON 字段，隐藏，用于存表格数据 -->
-            <tableJson
-                jcr:primaryType="nt:unstructured"
-                sling:resourceType="granite/ui/components/coral/foundation/form/textarea"
-                fieldLabel="Table Data (internal JSON)"
-                name="./tableJson"
-                rows="3"
-                renderReadOnly="true"
-                granite:class="cq-customtable-json"/>
-
-            <!-- 真实编辑 UI 的容器 -->
-            <tableEditor
-                jcr:primaryType="nt:unstructured"
-                sling:resourceType="granite/ui/components/coral/foundation/html"
-                tagName="div"
-                granite:class="cq-customtable-editor"/>
-
-            <!-- 校验错误信息显示区域（可选） -->
-            <validationMessage
-                jcr:primaryType="nt:unstructured"
-                sling:resourceType="granite/ui/components/coral/foundation/html"
-                tagName="div"
-                granite:class="cq-customtable-validation"/>
-        </items>
-    </content>
-</jcr:root>
