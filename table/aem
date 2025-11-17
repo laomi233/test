@@ -1,408 +1,285 @@
-// ============================================
-// 1. Sling Model (PerformanceTableModel.java)
-// 路径: core/src/main/java/com/myproject/core/models/PerformanceTableModel.java
-// ============================================
 package com.myproject.core.models;
 
 import com.adobe.cq.export.json.ComponentExporter;
 import com.adobe.cq.export.json.ExporterConstants;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
-import org.apache.sling.api.SlingHttpServletRequest;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.models.annotations.DefaultInjectionStrategy;
 import org.apache.sling.models.annotations.Exporter;
 import org.apache.sling.models.annotations.Model;
-import org.apache.sling.models.annotations.injectorspecific.ValueMapValue;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.sling.models.annotations.injectorspecific.Inject;
+import org.apache.sling.models.annotations.injectorspecific.Named;
 
-import javax.annotation.PostConstruct;
+import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @Model(
-    adaptables = {SlingHttpServletRequest.class, Resource.class},
-    adapters = {PerformanceTableModel.class, ComponentExporter.class},
-    resourceType = "myproject/components/content/performancetable",
-    defaultInjectionStrategy = DefaultInjectionStrategy.OPTIONAL
+        adaptables = {Resource.class},
+        adapters = {CustomTableModel.class, ComponentExporter.class},
+        resourceType = CustomTableModel.RESOURCE_TYPE,
+        defaultInjectionStrategy = DefaultInjectionStrategy.OPTIONAL
 )
 @Exporter(
-    name = ExporterConstants.SLING_MODEL_EXPORTER_NAME,
-    extensions = ExporterConstants.SLING_MODEL_EXTENSION
+        name = ExporterConstants.SLING_MODEL_EXPORTER_NAME,
+        extensions = ExporterConstants.SLING_MODEL_EXTENSION // "model.json"
 )
-public class PerformanceTableModel implements ComponentExporter {
+public class CustomTableModel implements ComponentExporter {
 
-    private static final Logger LOG = LoggerFactory.getLogger(PerformanceTableModel.class);
+    protected static final String RESOURCE_TYPE = "myproject/components/content/custom-table";
 
-    @ValueMapValue
+    @Inject
+    @Named("title")
     private String title;
 
-    @ValueMapValue
-    private String[] columns;
+    @Inject
+    @Named("tableJson")
+    private String tableJson;
 
-    @ValueMapValue
-    private String tableData;
+    private TableData tableData;
 
-    private List<Map<String, Object>> rows;
-
-    @PostConstruct
-    protected void init() {
-        // 解析表格数据
-        if (tableData != null && !tableData.isEmpty()) {
-            try {
-                rows = parseTableData(tableData);
-            } catch (Exception e) {
-                LOG.error("Error parsing table data", e);
-                rows = getDefaultRows();
-            }
-        } else {
-            rows = getDefaultRows();
-        }
-
-        // 设置默认列
-        if (columns == null || columns.length == 0) {
-            columns = new String[]{
-                "Index",
-                "Index Value",
-                "Point Change",
-                "% Change",
-                "Today High",
-                "Today Low",
-                "Previous Close",
-                "Last update (dd-mm-yyyy hh:mm)"
-            };
-        }
-
-        // 设置默认标题
-        if (title == null || title.isEmpty()) {
-            title = "Performance";
-        }
-    }
-
-    /**
-     * 解析 JSON 格式的表格数据
-     * 期望格式: [{"index":"...", "value":"...", ...}, ...]
-     */
-    private List<Map<String, Object>> parseTableData(String data) {
-        List<Map<String, Object>> result = new ArrayList<>();
-        try {
-            Gson gson = new Gson();
-            JsonElement jsonElement = JsonParser.parseString(data);
-            
-            if (jsonElement.isJsonArray()) {
-                JsonArray jsonArray = jsonElement.getAsJsonArray();
-                for (JsonElement element : jsonArray) {
-                    Map<String, Object> row = gson.fromJson(element, Map.class);
-                    result.add(row);
-                }
-            }
-        } catch (Exception e) {
-            LOG.error("Failed to parse table data JSON", e);
-        }
-        return result;
-    }
-
-    /**
-     * 获取默认行数据
-     */
-    private List<Map<String, Object>> getDefaultRows() {
-        List<Map<String, Object>> defaultRows = new ArrayList<>();
-        
-        Map<String, Object> row1 = new HashMap<>();
-        row1.put("index", "Hang Seng Index");
-        row1.put("value", "26,298.94");
-        row1.put("pointChange", "-273.52");
-        row1.put("percentChange", "-1.03%");
-        row1.put("todayHigh", "26,531.80");
-        row1.put("todayLow", "26,252.36");
-        row1.put("previousClose", "26,572.46");
-        row1.put("lastUpdate", "17-11-2025 14:27");
-        row1.put("isNegative", true);
-        
-        Map<String, Object> row2 = new HashMap<>();
-        row2.put("index", "Hang Seng Index (Gross Total Return Index)");
-        row2.put("value", "93,681.28");
-        row2.put("pointChange", "-972.34");
-        row2.put("percentChange", "-1.03%");
-        row2.put("todayHigh", "94,510.75");
-        row2.put("todayLow", "93,515.34");
-        row2.put("previousClose", "94,653.62");
-        row2.put("lastUpdate", "17-11-2025 14:27");
-        row2.put("isNegative", true);
-        
-        Map<String, Object> row3 = new HashMap<>();
-        row3.put("index", "Hang Seng Index (Net Total Return Index)");
-        row3.put("value", "91,071.16");
-        row3.put("pointChange", "-945.24");
-        row3.put("percentChange", "-1.03%");
-        row3.put("todayHigh", "91,877.52");
-        row3.put("todayLow", "90,909.85");
-        row3.put("previousClose", "92,016.40");
-        row3.put("lastUpdate", "17-11-2025 14:27");
-        row3.put("isNegative", true);
-        
-        defaultRows.add(row1);
-        defaultRows.add(row2);
-        defaultRows.add(row3);
-        
-        return defaultRows;
-    }
-
-    @JsonProperty("title")
     public String getTitle() {
         return title;
     }
 
-    @JsonProperty("columns")
-    public String[] getColumns() {
-        return columns;
+    /**
+     * React 端会通过 props.table 拿到这个对象
+     */
+    public TableData getTable() {
+        if (tableData == null) {
+            tableData = parseTableJson(tableJson);
+        }
+        return tableData;
     }
 
-    @JsonProperty("rows")
-    public List<Map<String, Object>> getRows() {
-        return rows;
+    private TableData parseTableJson(String json) {
+        TableData empty = new TableData();
+        if (StringUtils.isBlank(json)) {
+            return empty;
+        }
+
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+            return mapper.readValue(json, TableData.class);
+        } catch (IOException e) {
+            // 解析失败时避免整个 model 挂掉，返回空结构
+            return empty;
+        }
     }
 
     @Override
     public String getExportedType() {
-        return "myproject/components/content/performancetable";
+        return RESOURCE_TYPE;
+    }
+
+    // 内部类：和前端期望的结构一致
+    public static class TableData {
+        private List<String> header = new ArrayList<>();
+        private List<List<String>> rows = new ArrayList<>();
+
+        public List<String> getHeader() {
+            return header;
+        }
+
+        public void setHeader(List<String> header) {
+            this.header = header;
+        }
+
+        public List<List<String>> getRows() {
+            return rows;
+        }
+
+        public void setRows(List<List<String>> rows) {
+            this.rows = rows;
+        }
     }
 }
-
-
-// ============================================
-// 2. 组件对话框配置 (_cq_dialog/.content.xml)
-// 路径: ui.apps/src/main/content/jcr_root/apps/myproject/components/content/performancetable/_cq_dialog/.content.xml
-// ============================================
-/*
 <?xml version="1.0" encoding="UTF-8"?>
-<jcr:root xmlns:sling="http://sling.apache.org/jcr/sling/1.0" 
-          xmlns:cq="http://www.day.com/jcr/cq/1.0" 
-          xmlns:jcr="http://www.jcp.org/jcr/1.0" 
-          xmlns:nt="http://www.jcp.org/jcr/nt/1.0"
+<jcr:root
+    xmlns:sling="http://sling.apache.org/jcr/sling/1.0"
+    xmlns:cq="http://www.day.com/jcr/cq/1.0"
+    xmlns:jcr="http://www.jcp.org/jcr/1.0"
     jcr:primaryType="nt:unstructured"
-    jcr:title="Performance Table"
+    jcr:title="Custom Table"
     sling:resourceType="cq/gui/components/authoring/dialog"
-    helpPath="https://www.adobe.com/go/aem_cmp_list_v2">
+    extraClientlibs="[myproject.customtable.editor]">
+
     <content
         jcr:primaryType="nt:unstructured"
         sling:resourceType="granite/ui/components/coral/foundation/container">
         <items jcr:primaryType="nt:unstructured">
-            <tabs
+
+            <!-- 标题 -->
+            <title
                 jcr:primaryType="nt:unstructured"
-                sling:resourceType="granite/ui/components/coral/foundation/tabs"
-                maximized="{Boolean}true">
-                <items jcr:primaryType="nt:unstructured">
-                    
-                    <!-- 基本设置标签 -->
-                    <basic
-                        jcr:primaryType="nt:unstructured"
-                        jcr:title="基本设置"
-                        sling:resourceType="granite/ui/components/coral/foundation/container"
-                        margin="{Boolean}true">
-                        <items jcr:primaryType="nt:unstructured">
-                            <columns
-                                jcr:primaryType="nt:unstructured"
-                                sling:resourceType="granite/ui/components/coral/foundation/fixedcolumns"
-                                margin="{Boolean}true">
-                                <items jcr:primaryType="nt:unstructured">
-                                    <column
-                                        jcr:primaryType="nt:unstructured"
-                                        sling:resourceType="granite/ui/components/coral/foundation/container">
-                                        <items jcr:primaryType="nt:unstructured">
-                                            
-                                            <!-- 标题 -->
-                                            <title
-                                                jcr:primaryType="nt:unstructured"
-                                                sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
-                                                fieldLabel="表格标题"
-                                                fieldDescription="显示在表格顶部的标题"
-                                                name="./title"
-                                                value="Performance"/>
-                                            
-                                            <!-- 列配置 -->
-                                            <columns
-                                                jcr:primaryType="nt:unstructured"
-                                                sling:resourceType="granite/ui/components/coral/foundation/form/multifield"
-                                                composite="{Boolean}false"
-                                                fieldLabel="表格列"
-                                                fieldDescription="配置表格的列名称">
-                                                <field
-                                                    jcr:primaryType="nt:unstructured"
-                                                    sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
-                                                    name="./columns"/>
-                                            </columns>
-                                            
-                                            <!-- 表格数据 -->
-                                            <tableData
-                                                jcr:primaryType="nt:unstructured"
-                                                sling:resourceType="granite/ui/components/coral/foundation/form/textarea"
-                                                fieldLabel="表格数据 (JSON)"
-                                                fieldDescription="以 JSON 格式输入表格数据。格式示例见下方。"
-                                                name="./tableData"
-                                                rows="15"/>
-                                            
-                                            <!-- 帮助文本 -->
-                                            <help
-                                                jcr:primaryType="nt:unstructured"
-                                                sling:resourceType="granite/ui/components/coral/foundation/well">
-                                                <items jcr:primaryType="nt:unstructured">
-                                                    <helpText
-                                                        jcr:primaryType="nt:unstructured"
-                                                        sling:resourceType="granite/ui/components/coral/foundation/text"
-                                                        text="&lt;strong&gt;JSON 格式示例:&lt;/strong&gt;&lt;br/&gt;
-[{
-  &quot;index&quot;: &quot;Hang Seng Index&quot;,
-  &quot;value&quot;: &quot;26,298.94&quot;,
-  &quot;pointChange&quot;: &quot;-273.52&quot;,
-  &quot;percentChange&quot;: &quot;-1.03%&quot;,
-  &quot;todayHigh&quot;: &quot;26,531.80&quot;,
-  &quot;todayLow&quot;: &quot;26,252.36&quot;,
-  &quot;previousClose&quot;: &quot;26,572.46&quot;,
-  &quot;lastUpdate&quot;: &quot;17-11-2025 14:27&quot;,
-  &quot;isNegative&quot;: true
-}]"/>
-                                                </items>
-                                            </help>
-                                            
-                                        </items>
-                                    </column>
-                                </items>
-                            </columns>
-                        </items>
-                    </basic>
-                    
-                </items>
-            </tabs>
+                sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                fieldLabel="Title"
+                name="./title"/>
+
+            <!-- 表格 JSON: 真正提交的字段（被隐藏） -->
+            <tableJson
+                jcr:primaryType="nt:unstructured"
+                sling:resourceType="granite/ui/components/coral/foundation/form/textarea"
+                fieldLabel="Table Data (internal JSON)"
+                name="./tableJson"
+                rows="3"
+                granite:class="cq-customtable-json"
+                renderReadOnly="true"/>
+
+            <!-- 用于渲染 Excel 风格表格的占位容器 -->
+            <tableEditor
+                jcr:primaryType="nt:unstructured"
+                sling:resourceType="granite/ui/components/coral/foundation/html"
+                tagName="div"
+                text=""
+                granite:class="cq-customtable-editor"/>
         </items>
     </content>
 </jcr:root>
-*/
-
-
-// ============================================
-// 3. 组件定义 (.content.xml)
-// 路径: ui.apps/src/main/content/jcr_root/apps/myproject/components/content/performancetable/.content.xml
-// ============================================
-/*
+/apps/myproject/components/content/custom-table/clientlibs/editor
+  ├─ js
+  │   └─ table-editor.js
+  ├─ css
+  │   └─ table-editor.css (可选)
+  └─ .content.xml
 <?xml version="1.0" encoding="UTF-8"?>
-<jcr:root xmlns:cq="http://www.day.com/jcr/cq/1.0" 
-          xmlns:jcr="http://www.jcp.org/jcr/1.0"
-    jcr:primaryType="cq:Component"
-    jcr:title="Performance Table"
-    jcr:description="可编辑的 Performance 表格组件，支持动态数据配置"
-    componentGroup="My Project - Content"/>
-*/
+<jcr:root
+    xmlns:jcr="http://www.jcp.org/jcr/1.0"
+    xmlns:nt="http://www.jcp.org/jcr/nt/1.0"
+    jcr:primaryType="cq:ClientLibraryFolder"
+    categories="[myproject.customtable.editor]"
+    jsProcessor="[default:none,min:none]"
+    cssProcessor="[default:none,min:none]"/>
+(function (document, $) {
+  "use strict";
 
+  // AEM dialog 打开时事件
+  $(document).on("dialog-ready", function () {
+    var $jsonField = $(".cq-customtable-json textarea, textarea.cq-customtable-json");
+    if ($jsonField.length === 0) {
+      return;
+    }
 
-// ============================================
-// 4. HTL 模板 (performancetable.html)
-// 路径: ui.apps/src/main/content/jcr_root/apps/myproject/components/content/performancetable/performancetable.html
-// ============================================
-/*
-<sly data-sly-use.model="com.myproject.core.models.PerformanceTableModel">
-    <div class="cmp-performancetable"
-         data-cq-data-path="${resource.path}"
-         data-sly-resource="${resource @ resourceType='myproject/components/content/performancetable'}">
-    </div>
-</sly>
-*/
+    var $container = $(".cq-customtable-editor");
+    if ($container.length === 0) {
+      return;
+    }
 
+    // 隐藏原 textarea
+    $jsonField.closest(".coral-Form-fieldwrapper").hide();
 
-// ============================================
-// 5. React 组件映射 (PerformanceTable.js)
-// 路径: ui.frontend/src/components/PerformanceTable.js
-// ============================================
-/*
-import React, { useState } from 'react';
-import { Trash2, Plus, Edit2 } from 'lucide-react';
+    // 读取原 JSON
+    var raw = $jsonField.val();
+    var data;
+    try {
+      data = raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      data = null;
+    }
 
-const PerformanceTable = (props) => {
-  // 从 AEM props 接收数据
-  const initialColumns = props.columns || [
-    'Index', 'Index Value', 'Point Change', '% Change',
-    'Today High', 'Today Low', 'Previous Close', 'Last update (dd-mm-yyyy hh:mm)'
-  ];
-  
-  const initialRows = props.rows || [];
-  const tableTitle = props.title || 'Performance';
+    if (!data || !Array.isArray(data.header)) {
+      // 初始化一个默认结构
+      data = {
+        header: ["Index", "Index Value", "Point Change", "% Change", "Today High", "Today Low", "Previous Close", "Last update (dd-mm-yyyy hh:mm)"],
+        rows: [
+          ["", "", "", "", "", "", "", ""]
+        ]
+      };
+    }
 
-  const [columns, setColumns] = useState(initialColumns);
-  const [rows, setRows] = useState(initialRows);
-  const [isEditing, setIsEditing] = useState(false);
+    // 创建 HTML
+    var $table = $('<table class="cq-customtable-table"></table>');
+    var $thead = $("<thead></thead>");
+    var $tbody = $("<tbody></tbody>");
+    var $btnAddRow = $('<button type="button" class="cq-customtable-addrow">Add row</button>');
 
-  // ... 其余组件代码与之前相同 ...
+    // 渲染表头
+    var $trHead = $("<tr></tr>");
+    data.header.forEach(function (h, colIndex) {
+      var $th = $("<th></th>");
+      var $input = $('<input type="text" class="cq-customtable-input-header">')
+        .val(h)
+        .attr("data-col", colIndex);
+      $th.append($input);
+      $trHead.append($th);
+    });
+    $thead.append($trHead);
 
-  return (
-    <div className="bg-white rounded-2xl shadow-sm p-8 max-w-full mx-auto">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">{tableTitle}</h2>
-      // ... 其余 JSX ...
-    </div>
-  );
-};
+    // 渲染内容行
+    function renderRows() {
+      $tbody.empty();
+      data.rows.forEach(function (row, rowIndex) {
+        var $tr = $("<tr></tr>");
+        row.forEach(function (cell, colIndex) {
+          var $td = $("<td></td>");
+          var $input = $('<input type="text" class="cq-customtable-input-cell">')
+            .val(cell)
+            .attr("data-row", rowIndex)
+            .attr("data-col", colIndex);
+          $td.append($input);
+          $tr.append($td);
+        });
+        $tbody.append($tr);
+      });
+    }
 
-export default PerformanceTable;
-*/
+    renderRows();
 
+    $btnAddRow.on("click", function () {
+      var cols = data.header.length;
+      var newRow = [];
+      for (var i = 0; i < cols; i++) {
+        newRow.push("");
+      }
+      data.rows.push(newRow);
+      renderRows();
+    });
 
-// ============================================
-// 6. pom.xml 依赖配置 (添加到 core/pom.xml)
-// ============================================
-/*
-<dependencies>
-    <!-- Gson for JSON parsing -->
-    <dependency>
-        <groupId>com.google.code.gson</groupId>
-        <artifactId>gson</artifactId>
-        <version>2.10.1</version>
-        <scope>provided</scope>
-    </dependency>
-    
-    <!-- Jackson for JSON -->
-    <dependency>
-        <groupId>com.fasterxml.jackson.core</groupId>
-        <artifactId>jackson-databind</artifactId>
-        <version>2.15.2</version>
-        <scope>provided</scope>
-    </dependency>
-</dependencies>
-*/
+    $table.append($thead).append($tbody);
+    $container.empty().append($table).append($btnAddRow);
 
+    // 对话框提交前，把表格内容同步回 textarea
+    $(document).on("click", ".cq-dialog-submit", function () {
+      // 更新 header
+      $thead.find("input.cq-customtable-input-header").each(function () {
+        var col = parseInt($(this).attr("data-col"), 10);
+        data.header[col] = $(this).val();
+      });
 
-// ============================================
-// 7. 项目结构总览
-// ============================================
-/*
-myproject/
-├── core/
-│   └── src/main/java/com/myproject/core/models/
-│       └── PerformanceTableModel.java
-├── ui.apps/
-│   └── src/main/content/jcr_root/apps/myproject/components/content/performancetable/
-│       ├── .content.xml
-│       ├── performancetable.html
-│       └── _cq_dialog/
-│           └── .content.xml
-└── ui.frontend/
-    └── src/components/
-        └── PerformanceTable.js
-*/
+      // 更新 rows
+      data.rows = [];
+      $tbody.find("tr").each(function (rowIndex) {
+        var rowValues = [];
+        $(this)
+          .find("input.cq-customtable-input-cell")
+          .each(function (colIndex) {
+            rowValues[colIndex] = $(this).val();
+          });
+        data.rows.push(rowValues);
+      });
 
+      $jsonField.val(JSON.stringify(data));
+    });
+  });
+})(document, Granite.$);
+.cq-customtable-table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-top: 10px;
+}
 
-// ============================================
-// 8. 部署步骤
-// ============================================
-/*
-1. 将 Java 类放入 core 模块
-2. 将对话框和组件定义放入 ui.apps 模块
-3. 将 React 组件放入 ui.frontend 模块
-4. 在项目根目录执行:
-   mvn clean install -PautoInstallPackage
-5. 在 AEM 页面编辑器中拖放组件使用
-*/
+.cq-customtable-table th,
+.cq-customtable-table td {
+  border: 1px solid #dcdcdc;
+  padding: 4px;
+}
+
+.cq-customtable-table input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.cq-customtable-addrow {
+  margin-top: 8px;
+}
