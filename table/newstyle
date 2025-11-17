@@ -1,0 +1,637 @@
+// ResponsiveTable.js - React Component
+import React from 'react';
+import { MapTo } from '@adobe/aem-react-editable-components';
+import './ResponsiveTable.css';
+
+const ResponsiveTableConfig = {
+  emptyLabel: 'Responsive Table',
+  isEmpty: function(props) {
+    return !props.tableHtml || props.tableHtml.trim() === '';
+  }
+};
+
+const ResponsiveTable = (props) => {
+  const { 
+    tableHtml = '', 
+    title,
+    striped = true,
+    bordered = false,
+    hoverable = true,
+    responsive = true,
+    showHeader = true
+  } = props;
+
+  // Parse HTML table and extract data
+  const parseTableHtml = (html) => {
+    if (!html) return { headers: [], rows: [] };
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const table = doc.querySelector('table');
+
+    if (!table) return { headers: [], rows: [] };
+
+    // Extract headers
+    const headerCells = table.querySelectorAll('thead th, thead td');
+    const headers = Array.from(headerCells).map(cell => ({
+      content: cell.innerHTML.trim(),
+      align: cell.style.textAlign || 'left'
+    }));
+
+    // If no thead, try first row
+    if (headers.length === 0) {
+      const firstRow = table.querySelector('tr');
+      if (firstRow) {
+        const firstRowCells = firstRow.querySelectorAll('th, td');
+        headers.push(...Array.from(firstRowCells).map(cell => ({
+          content: cell.innerHTML.trim(),
+          align: cell.style.textAlign || 'left'
+        })));
+      }
+    }
+
+    // Extract body rows
+    const bodyRows = table.querySelectorAll('tbody tr');
+    const rows = Array.from(bodyRows).map(row => {
+      const cells = row.querySelectorAll('td, th');
+      return Array.from(cells).map(cell => ({
+        content: cell.innerHTML.trim(),
+        isHeader: cell.tagName.toLowerCase() === 'th',
+        align: cell.style.textAlign || 'left',
+        className: cell.className || ''
+      }));
+    });
+
+    // If no tbody, get all rows except first (if it was used as header)
+    if (rows.length === 0) {
+      const allRows = table.querySelectorAll('tr');
+      const startIndex = headers.length > 0 ? 1 : 0;
+      
+      for (let i = startIndex; i < allRows.length; i++) {
+        const cells = allRows[i].querySelectorAll('td, th');
+        rows.push(Array.from(cells).map(cell => ({
+          content: cell.innerHTML.trim(),
+          isHeader: cell.tagName.toLowerCase() === 'th',
+          align: cell.style.textAlign || 'left',
+          className: cell.className || ''
+        })));
+      }
+    }
+
+    return { headers, rows };
+  };
+
+  if (!tableHtml || tableHtml.trim() === '') {
+    return (
+      <div className="cmp-table cmp-table--empty">
+        <p>No table data available. Please configure the component in the dialog.</p>
+      </div>
+    );
+  }
+
+  const { headers, rows } = parseTableHtml(tableHtml);
+
+  if (rows.length === 0) {
+    return (
+      <div className="cmp-table cmp-table--empty">
+        <p>Unable to parse table data. Please check your table HTML.</p>
+      </div>
+    );
+  }
+
+  // Detect if content contains negative numbers or percentage changes
+  const detectCellType = (content) => {
+    const text = content.replace(/<[^>]*>/g, '').trim();
+    
+    if (text.includes('↓') || text.startsWith('-')) {
+      return 'negative';
+    }
+    if (text.includes('↑') || text.startsWith('+')) {
+      return 'positive';
+    }
+    return 'default';
+  };
+
+  return (
+    <div className={`cmp-table-container ${responsive ? 'cmp-table-container--responsive' : ''}`}>
+      {title && <h3 className="cmp-table__title">{title}</h3>}
+      
+      <div className="cmp-table__wrapper">
+        <table 
+          className={`
+            cmp-table
+            ${striped ? 'cmp-table--striped' : ''}
+            ${bordered ? 'cmp-table--bordered' : ''}
+            ${hoverable ? 'cmp-table--hoverable' : ''}
+          `.trim()}
+        >
+          {showHeader && headers.length > 0 && (
+            <thead className="cmp-table__head">
+              <tr className="cmp-table__head-row">
+                {headers.map((header, idx) => (
+                  <th 
+                    key={idx} 
+                    className="cmp-table__header"
+                    style={{ textAlign: header.align }}
+                    dangerouslySetInnerHTML={{ __html: header.content }}
+                  />
+                ))}
+              </tr>
+            </thead>
+          )}
+          <tbody className="cmp-table__body">
+            {rows.map((row, rowIdx) => (
+              <tr key={rowIdx} className="cmp-table__row">
+                {row.map((cell, cellIdx) => {
+                  const CellTag = cell.isHeader ? 'th' : 'td';
+                  const cellType = detectCellType(cell.content);
+                  
+                  return (
+                    <CellTag
+                      key={cellIdx} 
+                      className={`
+                        ${cell.isHeader ? 'cmp-table__row-header' : 'cmp-table__cell'}
+                        ${cellType === 'negative' ? 'cmp-table__cell--negative' : ''}
+                        ${cellType === 'positive' ? 'cmp-table__cell--positive' : ''}
+                        ${cell.className}
+                      `.trim()}
+                      style={{ textAlign: cell.align }}
+                      data-label={headers[cellIdx]?.content?.replace(/<[^>]*>/g, '') || `Column ${cellIdx + 1}`}
+                      dangerouslySetInnerHTML={{ __html: cell.content }}
+                    />
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+export default MapTo('myproject/components/content/responsivetable')(
+  ResponsiveTable,
+  ResponsiveTableConfig
+);
+
+// ResponsiveTable.css
+.cmp-table-container {
+  width: 100%;
+  margin: 1.5rem 0;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.cmp-table__title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0 0 1.25rem 0;
+  color: #1a1a1a;
+}
+
+.cmp-table__wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 8px;
+}
+
+.cmp-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #fff;
+  font-size: 0.9rem;
+}
+
+/* Header Styles */
+.cmp-table__head {
+  background-color: #fafafa;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.cmp-table__head-row {
+  height: 48px;
+}
+
+.cmp-table__header {
+  padding: 0.875rem 1rem;
+  text-align: left;
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: #6b7280;
+  white-space: nowrap;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* Body Styles */
+.cmp-table__body {
+  background-color: #ffffff;
+}
+
+.cmp-table__row {
+  border-bottom: 1px solid #f3f4f6;
+  transition: background-color 0.15s ease;
+}
+
+.cmp-table__row:last-child {
+  border-bottom: none;
+}
+
+.cmp-table__row-header {
+  padding: 1rem;
+  font-weight: 500;
+  color: #1f2937;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.cmp-table__cell {
+  padding: 1rem;
+  color: #374151;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.cmp-table__cell:first-child,
+.cmp-table__row-header:first-child {
+  text-align: left;
+}
+
+/* Negative values (red) */
+.cmp-table__cell--negative {
+  color: #dc2626;
+  font-weight: 500;
+}
+
+/* Positive values (green) */
+.cmp-table__cell--positive {
+  color: #16a34a;
+  font-weight: 500;
+}
+
+/* Hoverable rows */
+.cmp-table--hoverable .cmp-table__body .cmp-table__row:hover {
+  background-color: #f9fafb;
+}
+
+/* Striped rows */
+.cmp-table--striped .cmp-table__body .cmp-table__row:nth-child(even) {
+  background-color: #fafafa;
+}
+
+.cmp-table--striped .cmp-table__body .cmp-table__row:nth-child(even):hover {
+  background-color: #f5f5f5;
+}
+
+/* Preserve RTE formatting */
+.cmp-table__cell p,
+.cmp-table__header p,
+.cmp-table__row-header p {
+  margin: 0;
+}
+
+.cmp-table__cell strong,
+.cmp-table__header strong,
+.cmp-table__row-header strong {
+  font-weight: 600;
+}
+
+.cmp-table__cell em,
+.cmp-table__header em,
+.cmp-table__row-header em {
+  font-style: italic;
+}
+
+.cmp-table__cell a,
+.cmp-table__header a,
+.cmp-table__row-header a {
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.cmp-table__cell a:hover,
+.cmp-table__header a:hover,
+.cmp-table__row-header a:hover {
+  text-decoration: underline;
+}
+
+/* Empty state */
+.cmp-table--empty {
+  padding: 3rem 2rem;
+  text-align: center;
+  background-color: #fafafa;
+  border: 2px dashed #e5e7eb;
+  border-radius: 8px;
+  color: #6b7280;
+}
+
+/* Responsive styles for mobile */
+@media screen and (max-width: 768px) {
+  .cmp-table-container {
+    padding: 1rem;
+    margin: 1rem 0;
+  }
+
+  .cmp-table-container--responsive .cmp-table,
+  .cmp-table-container--responsive .cmp-table__head,
+  .cmp-table-container--responsive .cmp-table__body,
+  .cmp-table-container--responsive .cmp-table__row {
+    display: block;
+  }
+
+  .cmp-table-container--responsive .cmp-table__head {
+    display: none;
+  }
+
+  .cmp-table-container--responsive .cmp-table__row {
+    margin-bottom: 1rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 0.75rem;
+    background: #ffffff;
+  }
+
+  .cmp-table-container--responsive .cmp-table__row:last-child {
+    margin-bottom: 0;
+  }
+
+  .cmp-table-container--responsive .cmp-table__row-header,
+  .cmp-table-container--responsive .cmp-table__cell {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.625rem 0;
+    border-bottom: 1px solid #f3f4f6;
+    text-align: right;
+  }
+
+  .cmp-table-container--responsive .cmp-table__row-header:last-child,
+  .cmp-table-container--responsive .cmp-table__cell:last-child {
+    border-bottom: none;
+  }
+
+  .cmp-table-container--responsive .cmp-table__row-header::before,
+  .cmp-table-container--responsive .cmp-table__cell::before {
+    content: attr(data-label);
+    font-weight: 500;
+    color: #6b7280;
+    font-size: 0.813rem;
+    margin-right: 1rem;
+    text-align: left;
+    flex: 1;
+  }
+
+  .cmp-table-container--responsive .cmp-table__cell {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+/* Tablet breakpoint */
+@media screen and (min-width: 769px) and (max-width: 1024px) {
+  .cmp-table__header,
+  .cmp-table__cell,
+  .cmp-table__row-header {
+    padding: 0.75rem 0.875rem;
+    font-size: 0.875rem;
+  }
+  
+  .cmp-table-container {
+    padding: 1.25rem;
+  }
+}
+
+// _cq_dialog/.content.xml - AEM Dialog
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root xmlns:sling="http://sling.apache.org/jcr/sling/1.0"
+          xmlns:granite="http://www.adobe.com/jcr/granite/1.0"
+          xmlns:cq="http://www.day.com/jcr/cq/1.0"
+          xmlns:jcr="http://www.jcp.org/jcr/1.0"
+          xmlns:nt="http://www.jcp.org/jcr/nt/1.0"
+          jcr:primaryType="nt:unstructured"
+          jcr:title="Responsive Table"
+          sling:resourceType="cq/gui/components/authoring/dialog"
+          extraClientlibs="[cq.widgets.rte]">
+    <content
+        jcr:primaryType="nt:unstructured"
+        sling:resourceType="granite/ui/components/coral/foundation/container">
+        <items jcr:primaryType="nt:unstructured">
+            <tabs
+                jcr:primaryType="nt:unstructured"
+                sling:resourceType="granite/ui/components/coral/foundation/tabs"
+                maximized="{Boolean}true">
+                <items jcr:primaryType="nt:unstructured">
+                    <general
+                        jcr:primaryType="nt:unstructured"
+                        jcr:title="General"
+                        sling:resourceType="granite/ui/components/coral/foundation/container">
+                        <items jcr:primaryType="nt:unstructured">
+                            <columns
+                                jcr:primaryType="nt:unstructured"
+                                sling:resourceType="granite/ui/components/coral/foundation/fixedcolumns"
+                                margin="{Boolean}true">
+                                <items jcr:primaryType="nt:unstructured">
+                                    <column
+                                        jcr:primaryType="nt:unstructured"
+                                        sling:resourceType="granite/ui/components/coral/foundation/container">
+                                        <items jcr:primaryType="nt:unstructured">
+                                            <title
+                                                jcr:primaryType="nt:unstructured"
+                                                sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                                                fieldLabel="Table Title"
+                                                fieldDescription="Optional title displayed above the table"
+                                                name="./title"/>
+                                            <tableHtml
+                                                jcr:primaryType="nt:unstructured"
+                                                sling:resourceType="cq/gui/components/authoring/dialog/richtext"
+                                                fieldLabel="Table Content"
+                                                fieldDescription="Create your table using the table editor. Use negative numbers with '-' for red text."
+                                                name="./tableHtml"
+                                                useFixedInlineToolbar="{Boolean}true">
+                                                <rtePlugins jcr:primaryType="nt:unstructured">
+                                                    <table
+                                                        jcr:primaryType="nt:unstructured"
+                                                        features="[table,modifytable,insertrow,removerow,insertcolumn,removecolumn,cellprops,mergecells,selectrow,selectcolumn]"/>
+                                                    <format
+                                                        jcr:primaryType="nt:unstructured"
+                                                        features="[bold,italic,underline]"/>
+                                                    <links
+                                                        jcr:primaryType="nt:unstructured"
+                                                        features="[modifylink,unlink]"/>
+                                                    <lists
+                                                        jcr:primaryType="nt:unstructured"
+                                                        features="[ordered,unordered]"/>
+                                                    <edit
+                                                        jcr:primaryType="nt:unstructured"
+                                                        features="[cut,copy,paste-default,paste-plaintext,paste-wordhtml]"/>
+                                                    <undo
+                                                        jcr:primaryType="nt:unstructured"
+                                                        features="[undo,redo]"/>
+                                                </rtePlugins>
+                                                <uiSettings jcr:primaryType="nt:unstructured">
+                                                    <cui jcr:primaryType="nt:unstructured">
+                                                        <inline
+                                                            jcr:primaryType="nt:unstructured"
+                                                            toolbar="[format#bold,format#italic,format#underline,#links,table#table,table#modifytable]">
+                                                            <popovers jcr:primaryType="nt:unstructured">
+                                                                <table
+                                                                    jcr:primaryType="nt:unstructured"
+                                                                    items="[table#insertcolumn-before,table#insertcolumn-after,table#removecolumn,table#insertrow-before,table#insertrow-after,table#removerow,table#cellprops,table#mergecells,-,table#removetable]"
+                                                                    ref="table"/>
+                                                            </popovers>
+                                                        </inline>
+                                                    </cui>
+                                                </uiSettings>
+                                            </tableHtml>
+                                        </items>
+                                    </column>
+                                </items>
+                            </columns>
+                        </items>
+                    </general>
+                    <options
+                        jcr:primaryType="nt:unstructured"
+                        jcr:title="Options"
+                        sling:resourceType="granite/ui/components/coral/foundation/container">
+                        <items jcr:primaryType="nt:unstructured">
+                            <columns
+                                jcr:primaryType="nt:unstructured"
+                                sling:resourceType="granite/ui/components/coral/foundation/fixedcolumns"
+                                margin="{Boolean}true">
+                                <items jcr:primaryType="nt:unstructured">
+                                    <column
+                                        jcr:primaryType="nt:unstructured"
+                                        sling:resourceType="granite/ui/components/coral/foundation/container">
+                                        <items jcr:primaryType="nt:unstructured">
+                                            <showHeader
+                                                jcr:primaryType="nt:unstructured"
+                                                sling:resourceType="granite/ui/components/coral/foundation/form/checkbox"
+                                                fieldDescription="Show table header row"
+                                                name="./showHeader"
+                                                text="Show Header"
+                                                checked="{Boolean}true"
+                                                value="{Boolean}true"/>
+                                            <striped
+                                                jcr:primaryType="nt:unstructured"
+                                                sling:resourceType="granite/ui/components/coral/foundation/form/checkbox"
+                                                fieldDescription="Enable striped rows"
+                                                name="./striped"
+                                                text="Striped Rows"
+                                                checked="{Boolean}true"
+                                                value="{Boolean}true"/>
+                                            <bordered
+                                                jcr:primaryType="nt:unstructured"
+                                                sling:resourceType="granite/ui/components/coral/foundation/form/checkbox"
+                                                fieldDescription="Add borders around cells"
+                                                name="./bordered"
+                                                text="Bordered"
+                                                value="{Boolean}true"/>
+                                            <hoverable
+                                                jcr:primaryType="nt:unstructured"
+                                                sling:resourceType="granite/ui/components/coral/foundation/form/checkbox"
+                                                fieldDescription="Enable hover effect"
+                                                name="./hoverable"
+                                                text="Hoverable Rows"
+                                                checked="{Boolean}true"
+                                                value="{Boolean}true"/>
+                                            <responsive
+                                                jcr:primaryType="nt:unstructured"
+                                                sling:resourceType="granite/ui/components/coral/foundation/form/checkbox"
+                                                fieldDescription="Make table responsive on mobile"
+                                                name="./responsive"
+                                                text="Responsive Layout"
+                                                checked="{Boolean}true"
+                                                value="{Boolean}true"/>
+                                        </items>
+                                    </column>
+                                </items>
+                            </columns>
+                        </items>
+                    </options>
+                </items>
+            </tabs>
+        </items>
+    </content>
+</jcr:root>
+
+// ResponsiveTableModel.java - Sling Model
+package com.myproject.core.models;
+
+import com.adobe.cq.export.json.ComponentExporter;
+import com.adobe.cq.export.json.ExporterConstants;
+import org.apache.sling.api.SlingHttpServletRequest;
+import org.apache.sling.models.annotations.DefaultInjectionStrategy;
+import org.apache.sling.models.annotations.Exporter;
+import org.apache.sling.models.annotations.Model;
+import org.apache.sling.models.annotations.injectorspecific.ValueMapValue;
+
+@Model(
+    adaptables = SlingHttpServletRequest.class,
+    adapters = {ResponsiveTableModel.class, ComponentExporter.class},
+    resourceType = ResponsiveTableModel.RESOURCE_TYPE,
+    defaultInjectionStrategy = DefaultInjectionStrategy.OPTIONAL
+)
+@Exporter(
+    name = ExporterConstants.SLING_MODEL_EXPORTER_NAME,
+    extensions = ExporterConstants.SLING_MODEL_EXTENSION
+)
+public class ResponsiveTableModel implements ComponentExporter {
+
+    static final String RESOURCE_TYPE = "myproject/components/content/responsivetable";
+
+    @ValueMapValue
+    private String title;
+
+    @ValueMapValue
+    private String tableHtml;
+
+    @ValueMapValue
+    private Boolean striped;
+
+    @ValueMapValue
+    private Boolean bordered;
+
+    @ValueMapValue
+    private Boolean hoverable;
+
+    @ValueMapValue
+    private Boolean responsive;
+
+    @ValueMapValue
+    private Boolean showHeader;
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getTableHtml() {
+        return tableHtml;
+    }
+
+    public Boolean getStriped() {
+        return striped != null ? striped : true;
+    }
+
+    public Boolean getBordered() {
+        return bordered != null ? bordered : false;
+    }
+
+    public Boolean getHoverable() {
+        return hoverable != null ? hoverable : true;
+    }
+
+    public Boolean getResponsive() {
+        return responsive != null ? responsive : true;
+    }
+
+    public Boolean getShowHeader() {
+        return showHeader != null ? showHeader : true;
+    }
+
+    @Override
+    public String getExportedType() {
+        return RESOURCE_TYPE;
+    }
+}
