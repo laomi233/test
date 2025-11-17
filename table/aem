@@ -283,3 +283,53 @@ public class CustomTableModel implements ComponentExporter {
 .cq-customtable-addrow {
   margin-top: 8px;
 }
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root
+    xmlns:sling="http://sling.apache.org/jcr/sling/1.0"
+    xmlns:cq="http://www.day.com/jcr/cq/1.0"
+    xmlns:jcr="http://www.jcp.org/jcr/1.0"
+    jcr:primaryType="nt:unstructured"
+    jcr:title="Custom Table"
+    sling:resourceType="cq/gui/components/authoring/dialog"
+    extraClientlibs="[myproject.customtable.editor]">
+
+    <content
+        jcr:primaryType="nt:unstructured"
+        sling:resourceType="granite/ui/components/coral/foundation/container">
+        <items jcr:primaryType="nt:unstructured">
+
+            <!-- 标题（必填） -->
+            <title
+                jcr:primaryType="nt:unstructured"
+                sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                fieldLabel="Title"
+                name="./title"
+                required="{Boolean}true"
+                emptyText="例如：Performance"/>
+
+            <!-- 内部 JSON 字段，隐藏，用于存表格数据 -->
+            <tableJson
+                jcr:primaryType="nt:unstructured"
+                sling:resourceType="granite/ui/components/coral/foundation/form/textarea"
+                fieldLabel="Table Data (internal JSON)"
+                name="./tableJson"
+                rows="3"
+                renderReadOnly="true"
+                granite:class="cq-customtable-json"/>
+
+            <!-- 真实编辑 UI 的容器 -->
+            <tableEditor
+                jcr:primaryType="nt:unstructured"
+                sling:resourceType="granite/ui/components/coral/foundation/html"
+                tagName="div"
+                granite:class="cq-customtable-editor"/>
+
+            <!-- 校验错误信息显示区域（可选） -->
+            <validationMessage
+                jcr:primaryType="nt:unstructured"
+                sling:resourceType="granite/ui/components/coral/foundation/html"
+                tagName="div"
+                granite:class="cq-customtable-validation"/>
+        </items>
+    </content>
+</jcr:root>
