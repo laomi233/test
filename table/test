@@ -556,3 +556,125 @@ import './components/ResponsiveTable/ResponsiveTable';
 
 The table will automatically be responsive on mobile!
 */
+
+
+
+Gotcha — if this is **only for the authoring dialog** and you *don’t* want any width behavior to leak into the React SPA render, then you should **solve this purely with CSS in an authoring-only clientlib**, not by modifying the table HTML.
+
+That way:
+
+* Authors get nice wide cells while editing in the RTE dialog.
+* No `style="width:..."` or classes are stored in the content.
+* Your React SPA sees “clean” HTML and can style tables however it wants.
+
+---
+
+## 1. Core idea
+
+Instead of changing cell **properties**, just style the RTE’s editable area in **author mode only**:
+
+```css
+/* Authoring-only clientlib */
+.cq-RichText-editable table td,
+.cq-RichText-editable table th {
+  min-width: 120px;   /* or whatever default width you want */
+}
+```
+
+Because this CSS is loaded **only inside the dialog**, it never affects the published React app.
+
+New columns & cells inserted in the RTE automatically use this min width because the rule targets **all table cells while editing**.
+
+---
+
+## 2. Create an authoring-only clientlib
+
+Under `/apps`, create something like:
+
+**Node structure:**
+
+```text
+/apps/your-project/clientlibs/rte-table-author
+  - jcr:primaryType = cq:ClientLibraryFolder
+  - categories = ["yourproject.rte.table.author"]
+  - allowProxy = true
+  /css
+    - jcr:primaryType = nt:folder
+    /table-author.css
+      - jcr:primaryType = nt:file
+  - css.txt
+```
+
+**`css.txt`:**
+
+```text
+table-author.css
+```
+
+**`table-author.css`:**
+
+```css
+/* Apply only inside RTE editing area */
+.cq-RichText-editable table td,
+.cq-RichText-editable table th {
+  min-width: 120px; /* default visual width for better editing */
+  /* optional: padding, border to make them easier to click */
+  /* padding: 4px; */
+}
+
+/* If you ONLY want this in dialogs, you can further scope it, e.g.: */
+.coral-Dialog .cq-RichText-editable table td,
+.coral-Dialog .cq-RichText-editable table th {
+  min-width: 120px;
+}
+```
+
+No classes or inline styles are added to the HTML — this is just styling the editing iframe.
+
+---
+
+## 3. Attach the clientlib to your component dialog
+
+In your component’s dialog (e.g. `/apps/your-project/components/my-component/_cq_dialog/.content.xml`):
+
+```xml
+<jcr:root
+    xmlns:sling="http://sling.apache.org/jcr/sling/1.0"
+    xmlns:jcr="http://www.jcp.org/jcr/1.0"
+    jcr:primaryType="nt:unstructured"
+    sling:resourceType="cq/gui/components/authoring/dialog"
+    extraClientlibs="[yourproject.rte.table.author]">
+    <!-- dialog content -->
+</jcr:root>
+```
+
+Now:
+
+* Whenever this dialog opens, AEM loads your `yourproject.rte.table.author` clientlib.
+* The RTE inside gets the `min-width` styling for table cells.
+* Your React SPA on publish **never sees this CSS**, so nothing changes there.
+
+---
+
+## 4. Optional: only for empty cells
+
+If you really only want “wide for empty cells” and don’t care once they type, you can try a variant like:
+
+```css
+.cq-RichText-editable table td:empty,
+.cq-RichText-editable table th:empty {
+  min-width: 120px;
+}
+```
+
+But note: the RTE often inserts `<br>` into empty cells, so `:empty` may not match reliably. The simple `td, th` rule is usually good enough for editing comfort.
+
+---
+
+## 5. Summary
+
+* **Don’t** modify the table HTML or cell properties (that would persist into content and affect React).
+* **Do** add an **author-only clientlib** and use CSS to give table cells a comfortable min-width inside the RTE dialog.
+* Attach that clientlib via `extraClientlibs` on the dialog so it never loads on the actual SPA page.
+
+If you paste your dialog/RTE XML, I can tweak the exact selectors and `extraClientlibs` value to match your project.
