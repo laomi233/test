@@ -1,0 +1,263 @@
+package com.example.aem.components.table;
+
+import org.apache.sling.api.resource.Resource;
+import org.apache.sling.api.resource.ResourceResolver;
+import org.apache.sling.models.annotations.Default;
+import org.apache.sling.models.annotations.Model;
+import org.apache.sling.models.annotations.injectorspecific.ChildResource;
+import org.apache.sling.models.annotations.injectorspecific.ValueMapValue;
+import com.adobe.cq.export.json.ComponentExporter;
+import com.adobe.cq.export.json.ExporterConstants;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Getter;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.LinkedHashMap;
+
+/**
+ * Table Component Model
+ * 对应 Dialog 中的所有配置字段
+ */
+@Model(
+    adaptables = Resource.class,
+    resourceType = "example/components/table",
+    exporters = {
+        @Exporter(
+            name = ExporterConstants.SLING_MODEL_EXPORTER_NAME,
+            extensions = ExporterConstants.SLING_MODEL_EXPORTER_EXTENSION_JSON
+        )
+    },
+    defaultInjectionStrategy = DefaultInjectionStrategy.OPTIONAL
+)
+public class TableComponent implements ComponentExporter {
+
+    // ==================== Basic Settings ====================
+    
+    @ValueMapValue
+    @Getter
+    private String title;
+
+    @ValueMapValue
+    @Getter
+    private String description;
+
+    @ValueMapValue
+    @Default(booleanValue = true)
+    @Getter
+    private boolean showHeader;
+
+    @ValueMapValue
+    @Default(booleanValue = true)
+    @Getter
+    private boolean sortable;
+
+    @ValueMapValue
+    @Default(intValues = 10)
+    @Getter
+    private int pageSize;
+
+    @ValueMapValue
+    @Default(booleanValue = true)
+    @Getter
+    private boolean allowRowOperations;
+
+    @ValueMapValue
+    @Default(booleanValue = true)
+    @Getter
+    private boolean allowColumnOperations;
+
+    // ==================== Column Configuration ====================
+    
+    @ChildResource
+    @Getter
+    private List<TableColumn> columns;
+
+    public List<TableColumn> getColumns() {
+        return columns != null ? columns : new ArrayList<>();
+    }
+
+    // ==================== Data Configuration ====================
+    
+    @ValueMapValue
+    @Default(values = "static")
+    @Getter
+    private String dataSourceType;
+
+    @ValueMapValue
+    @Getter
+    private String dataSourcePath;
+
+    @ChildResource
+    @Getter
+    private List<TableRow> rows;
+
+    public List<TableRow> getRows() {
+        return rows != null ? rows : new ArrayList<>();
+    }
+
+    // ==================== Styling ====================
+    
+    @ValueMapValue
+    @Default(values = "default")
+    @Getter
+    private String tableStyle;
+
+    @ValueMapValue
+    @Getter
+    private String customCssClass;
+
+    @ValueMapValue
+    @Default(booleanValue = true)
+    @Getter
+    private boolean responsive;
+
+    @ValueMapValue
+    @Getter
+    private String headerBgColor;
+
+    // ==================== Component Exporter ====================
+    
+    @Override
+    public String getExportedType() {
+        return "example/components/table";
+    }
+
+    /**
+     * 获取表格数据用于导出
+     */
+    public Object getExportData() {
+        return new TableData(
+            getTitle(),
+            getDescription(),
+            isShowHeader(),
+            isSortable(),
+            getPageSize(),
+            getColumns(),
+            getRows(),
+            getDataSourceType(),
+            getTableStyle(),
+            isResponsive()
+        );
+    }
+
+    // ==================== Inner Classes ====================
+
+    /**
+     * 列配置模型
+     */
+    @Model(adaptables = Resource.class, defaultInjectionStrategy = DefaultInjectionStrategy.OPTIONAL)
+    public static class TableColumn {
+        
+        @ValueMapValue
+        @Getter
+        private String key;
+
+        @ValueMapValue
+        @Getter
+        private String label;
+
+        @ValueMapValue
+        @Default(values = "text")
+        @Getter
+        private String type;
+
+        @ValueMapValue
+        @Getter
+        private String width;
+
+        @ValueMapValue
+        @Default(booleanValue = true)
+        @Getter
+        private boolean editable;
+
+        @ValueMapValue
+        @Default(booleanValue = false)
+        @Getter
+        private boolean required;
+    }
+
+    /**
+     * 行数据模型
+     */
+    @Model(adaptables = Resource.class, defaultInjectionStrategy = DefaultInjectionStrategy.OPTIONAL)
+    public static class TableRow {
+        
+        @ValueMapValue
+        @Getter
+        private String id;
+
+        @ChildResource
+        private List<TableCellData> data;
+
+        /**
+         * 将行数据转换为 Map 便于前端使用
+         */
+        public LinkedHashMap<String, String> getRowData() {
+            LinkedHashMap<String, String> rowData = new LinkedHashMap<>();
+            if (data != null) {
+                for (TableCellData cell : data) {
+                    rowData.put(cell.getKey(), cell.getValue());
+                }
+            }
+            return rowData;
+        }
+    }
+
+    /**
+     * 单元格数据模型
+     */
+    @Model(adaptables = Resource.class, defaultInjectionStrategy = DefaultInjectionStrategy.OPTIONAL)
+    public static class TableCellData {
+        
+        @ValueMapValue
+        @Getter
+        private String key;
+
+        @ValueMapValue
+        @Getter
+        private String value;
+    }
+
+    /**
+     * 用于导出的数据结构
+     */
+    @Getter
+    public static class TableData {
+        
+        private String title;
+        private String description;
+        private boolean showHeader;
+        private boolean sortable;
+        private int pageSize;
+        private List<TableColumn> columns;
+        private List<TableRow> rows;
+        private String dataSourceType;
+        private String tableStyle;
+        private boolean responsive;
+
+        public TableData(
+            String title,
+            String description,
+            boolean showHeader,
+            boolean sortable,
+            int pageSize,
+            List<TableColumn> columns,
+            List<TableRow> rows,
+            String dataSourceType,
+            String tableStyle,
+            boolean responsive
+        ) {
+            this.title = title;
+            this.description = description;
+            this.showHeader = showHeader;
+            this.sortable = sortable;
+            this.pageSize = pageSize;
+            this.columns = columns;
+            this.rows = rows;
+            this.dataSourceType = dataSourceType;
+            this.tableStyle = tableStyle;
+            this.responsive = responsive;
+        }
+    }
+}

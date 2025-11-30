@@ -1,0 +1,379 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root xmlns:sling="http://sling.apache.org/jcr/sling/1.0"
+    xmlns:cq="http://www.day.com/jcr/cq/1.0"
+    xmlns:jcr="http://www.jcp.org/jcr/1.0"
+    xmlns:nt="http://www.jcp.org/jcr/nt/1.0"
+    jcr:primaryType="cq:Dialog"
+    jcr:title="Table Component"
+    sling:resourceType="cq/gui/components/authoring/dialog">
+    
+    <!-- 主标签页 -->
+    <content
+        jcr:primaryType="nt:unstructured"
+        sling:resourceType="granite/ui/components/coral/foundation/container">
+        
+        <!-- 基础设置标签 -->
+        <items jcr:primaryType="nt:unstructured">
+            
+            <!-- 基本信息标签页 -->
+            <basic
+                jcr:primaryType="nt:unstructured"
+                sling:resourceType="granite/ui/components/coral/foundation/container"
+                margin="true">
+                
+                <items jcr:primaryType="nt:unstructured">
+                    
+                    <!-- 表格标题 -->
+                    <title
+                        jcr:primaryType="nt:unstructured"
+                        sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                        fieldLabel="Table Title"
+                        name="./title"
+                        placeholder="Enter table title"/>
+                    
+                    <!-- 表格描述 -->
+                    <description
+                        jcr:primaryType="nt:unstructured"
+                        sling:resourceType="granite/ui/components/coral/foundation/form/textarea"
+                        fieldLabel="Table Description"
+                        name="./description"
+                        placeholder="Enter table description"/>
+                    
+                    <!-- 是否显示表头 -->
+                    <showHeader
+                        jcr:primaryType="nt:unstructured"
+                        sling:resourceType="granite/ui/components/coral/foundation/form/checkbox"
+                        fieldLabel="Show Header"
+                        name="./showHeader"
+                        text="Show table header"
+                        value="true"
+                        checked="true"/>
+                    
+                    <!-- 是否可排序 -->
+                    <sortable
+                        jcr:primaryType="nt:unstructured"
+                        sling:resourceType="granite/ui/components/coral/foundation/form/checkbox"
+                        fieldLabel="Enable Sorting"
+                        name="./sortable"
+                        text="Allow sorting columns"
+                        value="true"/>
+                    
+                    <!-- 每页行数 -->
+                    <pageSize
+                        jcr:primaryType="nt:unstructured"
+                        sling:resourceType="granite/ui/components/coral/foundation/form/numberfield"
+                        fieldLabel="Rows Per Page"
+                        name="./pageSize"
+                        value="10"
+                        min="5"
+                        max="100"/>
+                    
+                    <!-- 是否允许添加/删除行列 -->
+                    <allowRowOperations
+                        jcr:primaryType="nt:unstructured"
+                        sling:resourceType="granite/ui/components/coral/foundation/form/checkbox"
+                        fieldLabel="Allow Row Operations"
+                        name="./allowRowOperations"
+                        text="Allow adding and deleting rows"
+                        value="true"
+                        checked="true"/>
+                    
+                    <allowColumnOperations
+                        jcr:primaryType="nt:unstructured"
+                        sling:resourceType="granite/ui/components/coral/foundation/form/checkbox"
+                        fieldLabel="Allow Column Operations"
+                        name="./allowColumnOperations"
+                        text="Allow adding and deleting columns"
+                        value="true"
+                        checked="true"/>
+                    
+                </items>
+            </basic>
+            
+            <!-- 列配置标签页 -->
+            <columns
+                jcr:primaryType="nt:unstructured"
+                sling:resourceType="granite/ui/components/coral/foundation/container"
+                margin="true">
+                
+                <items jcr:primaryType="nt:unstructured">
+                    
+                    <!-- 列配置容器 -->
+                    <columnsContainer
+                        jcr:primaryType="nt:unstructured"
+                        sling:resourceType="granite/ui/components/coral/foundation/form/field">
+                        
+                        <field
+                            jcr:primaryType="nt:unstructured"
+                            sling:resourceType="granite/ui/components/coral/foundation/form/multifield"
+                            fieldLabel="Table Columns"
+                            name="./columns">
+                            
+                            <field
+                                jcr:primaryType="nt:unstructured"
+                                sling:resourceType="granite/ui/components/coral/foundation/container"
+                                margin="false">
+                                
+                                <items jcr:primaryType="nt:unstructured">
+                                    
+                                    <!-- 列名称 -->
+                                    <columnKey
+                                        jcr:primaryType="nt:unstructured"
+                                        sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                                        fieldLabel="Column Key"
+                                        name="./key"
+                                        placeholder="e.g. firstName"
+                                        required="true"/>
+                                    
+                                    <!-- 列标签 -->
+                                    <columnLabel
+                                        jcr:primaryType="nt:unstructured"
+                                        sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                                        fieldLabel="Column Label"
+                                        name="./label"
+                                        placeholder="e.g. First Name"
+                                        required="true"/>
+                                    
+                                    <!-- 列类型 -->
+                                    <columnType
+                                        jcr:primaryType="nt:unstructured"
+                                        sling:resourceType="granite/ui/components/coral/foundation/form/select"
+                                        fieldLabel="Column Type"
+                                        name="./type">
+                                        
+                                        <items jcr:primaryType="nt:unstructured">
+                                            <text
+                                                jcr:primaryType="nt:unstructured"
+                                                text="Text"
+                                                value="text"/>
+                                            <number
+                                                jcr:primaryType="nt:unstructured"
+                                                text="Number"
+                                                value="number"/>
+                                            <date
+                                                jcr:primaryType="nt:unstructured"
+                                                text="Date"
+                                                value="date"/>
+                                            <email
+                                                jcr:primaryType="nt:unstructured"
+                                                text="Email"
+                                                value="email"/>
+                                            <link
+                                                jcr:primaryType="nt:unstructured"
+                                                text="Link"
+                                                value="link"/>
+                                            <image
+                                                jcr:primaryType="nt:unstructured"
+                                                text="Image"
+                                                value="image"/>
+                                        </items>
+                                    </columnType>
+                                    
+                                    <!-- 列宽度 -->
+                                    <columnWidth
+                                        jcr:primaryType="nt:unstructured"
+                                        sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                                        fieldLabel="Width (e.g. 200px, 20%)"
+                                        name="./width"
+                                        placeholder="200px or 20%"/>
+                                    
+                                    <!-- 是否可编辑 -->
+                                    <editable
+                                        jcr:primaryType="nt:unstructured"
+                                        sling:resourceType="granite/ui/components/coral/foundation/form/checkbox"
+                                        fieldLabel="Editable"
+                                        name="./editable"
+                                        text="Allow editing this column"
+                                        value="true"
+                                        checked="true"/>
+                                    
+                                    <!-- 是否必需 -->
+                                    <required
+                                        jcr:primaryType="nt:unstructured"
+                                        sling:resourceType="granite/ui/components/coral/foundation/form/checkbox"
+                                        fieldLabel="Required"
+                                        name="./required"
+                                        text="Make this field required"
+                                        value="true"/>
+                                    
+                                </items>
+                            </field>
+                        </field>
+                    </columnsContainer>
+                    
+                </items>
+            </columns>
+            
+            <!-- 数据配置标签页 -->
+            <data
+                jcr:primaryType="nt:unstructured"
+                sling:resourceType="granite/ui/components/coral/foundation/container"
+                margin="true">
+                
+                <items jcr:primaryType="nt:unstructured">
+                    
+                    <!-- 数据源类型 -->
+                    <dataSourceType
+                        jcr:primaryType="nt:unstructured"
+                        sling:resourceType="granite/ui/components/coral/foundation/form/select"
+                        fieldLabel="Data Source Type"
+                        name="./dataSourceType"
+                        value="static">
+                        
+                        <items jcr:primaryType="nt:unstructured">
+                            <static
+                                jcr:primaryType="nt:unstructured"
+                                text="Static Data"
+                                value="static"/>
+                            <json
+                                jcr:primaryType="nt:unstructured"
+                                text="JSON File"
+                                value="json"/>
+                            <api
+                                jcr:primaryType="nt:unstructured"
+                                text="External API"
+                                value="api"/>
+                            <sling
+                                jcr:primaryType="nt:unstructured"
+                                text="Sling Datasource"
+                                value="sling"/>
+                        </items>
+                    </dataSourceType>
+                    
+                    <!-- JSON/API路径 -->
+                    <dataSourcePath
+                        jcr:primaryType="nt:unstructured"
+                        sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                        fieldLabel="Data Source Path/URL"
+                        name="./dataSourcePath"
+                        placeholder="e.g. /content/dam/data.json or https://api.example.com/data"/>
+                    
+                    <!-- 静态数据容器 -->
+                    <rowsContainer
+                        jcr:primaryType="nt:unstructured"
+                        sling:resourceType="granite/ui/components/coral/foundation/form/field">
+                        
+                        <field
+                            jcr:primaryType="nt:unstructured"
+                            sling:resourceType="granite/ui/components/coral/foundation/form/multifield"
+                            fieldLabel="Table Rows"
+                            name="./rows">
+                            
+                            <field
+                                jcr:primaryType="nt:unstructured"
+                                sling:resourceType="granite/ui/components/coral/foundation/container"
+                                margin="false">
+                                
+                                <items jcr:primaryType="nt:unstructured">
+                                    
+                                    <!-- 行ID -->
+                                    <rowId
+                                        jcr:primaryType="nt:unstructured"
+                                        sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                                        fieldLabel="Row ID"
+                                        name="./id"
+                                        placeholder="Unique identifier"/>
+                                    
+                                    <!-- 行数据 (动态字段) -->
+                                    <rowData
+                                        jcr:primaryType="nt:unstructured"
+                                        sling:resourceType="granite/ui/components/coral/foundation/form/multifield"
+                                        fieldLabel="Row Data"
+                                        name="./data">
+                                        
+                                        <field
+                                            jcr:primaryType="nt:unstructured"
+                                            sling:resourceType="granite/ui/components/coral/foundation/container">
+                                            
+                                            <items jcr:primaryType="nt:unstructured">
+                                                <key
+                                                    jcr:primaryType="nt:unstructured"
+                                                    sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                                                    fieldLabel="Key"
+                                                    name="./key"/>
+                                                <value
+                                                    jcr:primaryType="nt:unstructured"
+                                                    sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                                                    fieldLabel="Value"
+                                                    name="./value"/>
+                                            </items>
+                                        </field>
+                                    </rowData>
+                                    
+                                </items>
+                            </field>
+                        </field>
+                    </rowsContainer>
+                    
+                </items>
+            </data>
+            
+            <!-- 样式配置标签页 -->
+            <styling
+                jcr:primaryType="nt:unstructured"
+                sling:resourceType="granite/ui/components/coral/foundation/container"
+                margin="true">
+                
+                <items jcr:primaryType="nt:unstructured">
+                    
+                    <!-- 表格样式 -->
+                    <tableStyle
+                        jcr:primaryType="nt:unstructured"
+                        sling:resourceType="granite/ui/components/coral/foundation/form/select"
+                        fieldLabel="Table Style"
+                        name="./tableStyle"
+                        value="default">
+                        
+                        <items jcr:primaryType="nt:unstructured">
+                            <default
+                                jcr:primaryType="nt:unstructured"
+                                text="Default"
+                                value="default"/>
+                            <striped
+                                jcr:primaryType="nt:unstructured"
+                                text="Striped"
+                                value="striped"/>
+                            <bordered
+                                jcr:primaryType="nt:unstructured"
+                                text="Bordered"
+                                value="bordered"/>
+                            <condensed
+                                jcr:primaryType="nt:unstructured"
+                                text="Condensed"
+                                value="condensed"/>
+                        </items>
+                    </tableStyle>
+                    
+                    <!-- 自定义CSS类 -->
+                    <customCssClass
+                        jcr:primaryType="nt:unstructured"
+                        sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                        fieldLabel="Custom CSS Class"
+                        name="./customCssClass"
+                        placeholder="e.g. my-table-style"/>
+                    
+                    <!-- 响应式表格 -->
+                    <responsive
+                        jcr:primaryType="nt:unstructured"
+                        sling:resourceType="granite/ui/components/coral/foundation/form/checkbox"
+                        fieldLabel="Responsive"
+                        name="./responsive"
+                        text="Enable responsive design"
+                        value="true"
+                        checked="true"/>
+                    
+                    <!-- 表头背景色 -->
+                    <headerBgColor
+                        jcr:primaryType="nt:unstructured"
+                        sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                        fieldLabel="Header Background Color"
+                        name="./headerBgColor"
+                        placeholder="#f5f5f5"/>
+                    
+                </items>
+            </styling>
+            
+        </items>
+    </content>
+    
+</jcr:root>

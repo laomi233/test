@@ -1,0 +1,496 @@
+/**
+ * AEM React Table Component
+ * 支持在 Author 环境中编辑单元格、添加/删除行列
+ */
+
+import React, { useState, useEffect } from 'react';
+import { useEditContext } from '@adobe/aem-react-editable-components';
+import './TableComponent.css';
+
+const TableComponent = (props) => {
+  const {
+    title,
+    description,
+    showHeader = true,
+    sortable = true,
+    pageSize = 10,
+    columns = [],
+    rows = [],
+    dataSourceType = 'static',
+    dataSourcePath,
+    tableStyle = 'default',
+    customCssClass,
+    responsive = true,
+    headerBgColor = '#f5f5f5',
+    allowRowOperations = true,
+    allowColumnOperations = true
+  } = props;
+
+  // 获取 AEM 编辑上下文
+  const { isInEditMode } = useEditContext() || { isInEditMode: false };
+
+  const [tableColumns, setTableColumns] = useState(columns || []);
+  const [tableData, setTableData] = useState(rows || []);
+  const [sortConfig, setSortConfig] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [editingCell, setEditingCell] = useState(null);
+  const [addingColumn, setAddingColumn] = useState(false);
+  const [newColumnName, setNewColumnName] = useState('');
+
+  // 从数据源加载数据
+  useEffect(() => {
+    if (dataSourceType === 'json' && dataSourcePath) {
+      fetch(dataSourcePath)
+        .then(res => res.json())
+        .then(data => setTableData(data))
+        .catch(err => console.error('Failed to load table data:', err));
+    } else if (dataSourceType === 'api' && dataSourcePath) {
+      fetch(dataSourcePath)
+        .then(res => res.json())
+        .then(data => setTableData(data))
+        .catch(err => console.error('Failed to load API data:', err));
+    } else {
+      setTableData(rows || []);
+    }
+  }, [dataSourceType, dataSourcePath, rows]);
+
+  // 处理列排序
+  const handleSort = (columnKey) => {
+    if (!sortable) return;
+
+    let newSortConfig = { key: columnKey, direction: 'asc' };
+    
+    if (sortConfig?.key === columnKey && sortConfig.direction === 'asc') {
+      newSortConfig.direction = 'desc';
+    }
+
+    setSortConfig(newSortConfig);
+    
+    const sorted = [...tableData].sort((a, b) => {
+      const aVal = a[columnKey];
+      const bVal = b[columnKey];
+      
+      if (aVal < bVal) return newSortConfig.direction === 'asc' ? -1 : 1;
+      if (aVal > bVal) return newSortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+    
+    setTableData(sorted);
+  };
+
+  // 处理单元格编辑
+  const handleCellEdit = (rowIndex, columnKey, newValue) => {
+    const updatedData = [...tableData];
+    updatedData[rowIndex] = {
+      ...updatedData[rowIndex],
+      [columnKey]: newValue
+    };
+    setTableData(updatedData);
+    setEditingCell(null);
+
+    if (isInEditMode) {
+      saveChanges(updatedData, tableColumns);
+    }
+  };
+
+  // 添加新行
+  const handleAddRow = () => {
+    const newRow = {};
+    tableColumns.forEach(col => {
+      newRow[col.key] = '';
+    });
+    const updatedData = [...tableData, newRow];
+    setTableData(updatedData);
+
+    if (isInEditMode) {
+      saveChanges(updatedData, tableColumns);
+    }
+  };
+
+  // 删除行
+  const handleDeleteRow = (rowIndex) => {
+    const updatedData = tableData.filter((_, idx) => idx !== rowIndex);
+    setTableData(updatedData);
+
+    if (isInEditMode) {
+      saveChanges(updatedData, tableColumns);
+    }
+  };
+
+  // 添加新列
+  const handleAddColumn = () => {
+    if (!newColumnName.trim()) return;
+
+    const columnKey = newColumnName.toLowerCase().replace(/\s+/g, '_');
+    const newColumn = {
+      key: columnKey,
+      label: newColumnName,
+      type: 'text',
+      editable: true,
+      required: false
+    };
+
+    const updatedColumns = [...tableColumns, newColumn];
+    setTableColumns(updatedColumns);
+
+    // 为所有现有行添加新列的空值
+    const updatedData = tableData.map(row => ({
+      ...row,
+      [columnKey]: ''
+    }));
+    setTableData(updatedData);
+
+    setNewColumnName('');
+    setAddingColumn(false);
+
+    if (isInEditMode) {
+      saveChanges(updatedData, updatedColumns);
+    }
+  };
+
+  // 删除列
+  const handleDeleteColumn = (columnKey) => {
+    if (tableColumns.length <= 1) {
+      alert('Table must have at least one column');
+      return;
+    }
+
+    const updatedColumns = tableColumns.filter(col => col.key !== columnKey);
+    setTableColumns(updatedColumns);
+
+    // 从所有行中移除该列
+    const updatedData = tableData.map(row => {
+      const newRow = { ...row };
+      delete newRow[columnKey];
+      return newRow;
+    });
+    setTableData(updatedData);
+
+    if (isInEditMode) {
+      saveChanges(updatedData, updatedColumns);
+    }
+  };
+
+  // 更新列配置
+  const handleColumnUpdate = (columnIndex, updates) => {
+    const updatedColumns = [...tableColumns];
+    updatedColumns[columnIndex] = { ...updatedColumns[columnIndex], ...updates };
+    setTableColumns(updatedColumns);
+
+    if (isInEditMode) {
+      saveChanges(tableData, updatedColumns);
+    }
+  };
+
+  // 保存更改到后端
+  const saveChanges = (data, cols) => {
+    const payload = {
+      ':operation': 'import',
+      ':contentType': 'json',
+      'rows': data,
+      'columns': cols
+    };
+
+    fetch(window.location.pathname, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    }).catch(err => console.error('Failed to save changes:', err));
+  };
+
+  // 渲染单元格
+  const renderCell = (row, column, rowIndex) => {
+    const value = row[column.key] || '';
+    const isEditing = editingCell?.row === rowIndex && editingCell?.col === column.key;
+    const isEditable = isInEditMode && column.editable !== false;
+
+    if (isEditing && isEditable) {
+      return (
+        <input
+          autoFocus
+          type={column.type || 'text'}
+          value={value}
+          onChange={(e) => handleCellEdit(rowIndex, column.key, e.target.value)}
+          onBlur={() => setEditingCell(null)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') setEditingCell(null);
+            if (e.key === 'Escape') setEditingCell(null);
+          }}
+          className="table-cell-input"
+        />
+      );
+    }
+
+    return (
+      <div
+        className={`table-cell ${isEditable ? 'editable' : ''}`}
+        onClick={() => isEditable && setEditingCell({ row: rowIndex, col: column.key })}
+      >
+        {renderCellContent(value, column.type)}
+      </div>
+    );
+  };
+
+  // 根据列类型渲染单元格内容
+  const renderCellContent = (value, type) => {
+    switch (type) {
+      case 'image':
+        return <img src={value} alt="cell-content" className="cell-image" />;
+      case 'link':
+        return <a href={value}>{value}</a>;
+      case 'date':
+        return value ? new Date(value).toLocaleDateString() : '';
+      default:
+        return value;
+    }
+  };
+
+  // 分页逻辑
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedData = tableData.slice(startIndex, endIndex);
+  const totalPages = Math.ceil(tableData.length / pageSize);
+
+  const tableClasses = [
+    'aem-table-component',
+    `table-style-${tableStyle}`,
+    responsive && 'responsive',
+    isInEditMode && 'in-edit-mode',
+    customCssClass
+  ].filter(Boolean).join(' ');
+
+  return (
+    <div className={tableClasses}>
+      {/* 编辑模式指示器 */}
+      {isInEditMode && (
+        <div className="edit-mode-indicator">
+          <span>✎ 编辑模式已启用 - 点击单元格编辑内容</span>
+        </div>
+      )}
+
+      {/* 标题 */}
+      {title && (
+        <h2 className="table-title">{title}</h2>
+      )}
+
+      {/* 描述 */}
+      {description && (
+        <p className="table-description">{description}</p>
+      )}
+
+      {/* 表格 */}
+      <div className="table-wrapper">
+        <table>
+          {/* 表头 */}
+          {showHeader && (
+            <thead>
+              <tr style={{ backgroundColor: headerBgColor }}>
+                {tableColumns.map((column, colIndex) => (
+                  <th
+                    key={column.key}
+                    style={{ width: column.width }}
+                    onClick={() => handleSort(column.key)}
+                    className={`${sortable ? 'sortable' : ''} ${isInEditMode ? 'editable-header' : ''}`}
+                  >
+                    <div className="header-cell">
+                      <span>{column.label}</span>
+                      
+                      {sortable && sortConfig?.key === column.key && (
+                        <span className="sort-icon">
+                          {sortConfig.direction === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+
+                      {isInEditMode && allowColumnOperations && (
+                        <div className="column-actions">
+                          <button
+                            className="btn-column-config"
+                            title="Column settings"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // 可以扩展为显示列配置对话框
+                            }}
+                          >
+                            ⚙
+                          </button>
+                          <button
+                            className="btn-delete-column"
+                            title="Delete column"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (window.confirm(`Delete column "${column.label}"?`)) {
+                                handleDeleteColumn(column.key);
+                              }
+                            }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </th>
+                ))}
+                {isInEditMode && (allowRowOperations || allowColumnOperations) && (
+                  <th style={{ width: '80px', textAlign: 'center' }}>操作</th>
+                )}
+              </tr>
+            </thead>
+          )}
+
+          {/* 表体 */}
+          <tbody>
+            {paginatedData.length > 0 ? (
+              paginatedData.map((row, rowIndexInPage) => {
+                const rowIndex = startIndex + rowIndexInPage;
+                return (
+                  <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'even' : 'odd'}>
+                    {tableColumns.map((column) => (
+                      <td key={`${rowIndex}-${column.key}`}>
+                        {renderCell(row, column, rowIndex)}
+                      </td>
+                    ))}
+                    {isInEditMode && (allowRowOperations || allowColumnOperations) && (
+                      <td className="row-actions">
+                        {allowRowOperations && (
+                          <button
+                            className="btn-delete-row"
+                            title="Delete row"
+                            onClick={() => {
+                              if (window.confirm('Delete this row?')) {
+                                handleDeleteRow(rowIndex);
+                              }
+                            }}
+                          >
+                            🗑
+                          </button>
+                        )}
+                      </td>
+                    )}
+                  </tr>
+                );
+              })
+            ) : (
+              <tr>
+                <td colSpan={tableColumns.length + (isInEditMode ? 1 : 0)} className="empty-message">
+                  No data available
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* 操作按钮区 */}
+      {isInEditMode && (allowRowOperations || allowColumnOperations) && (
+        <div className="table-operations">
+          {allowRowOperations && (
+            <button
+              onClick={handleAddRow}
+              className="btn-operation btn-add-row"
+            >
+              + 添加新行
+            </button>
+          )}
+
+          {allowColumnOperations && (
+            <div className="add-column-section">
+              {!addingColumn ? (
+                <button
+                  onClick={() => setAddingColumn(true)}
+                  className="btn-operation btn-add-column"
+                >
+                  + 添加新列
+                </button>
+              ) : (
+                <div className="add-column-form">
+                  <input
+                    type="text"
+                    value={newColumnName}
+                    onChange={(e) => setNewColumnName(e.target.value)}
+                    placeholder="Enter column name"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleAddColumn();
+                      if (e.key === 'Escape') {
+                        setAddingColumn(false);
+                        setNewColumnName('');
+                      }
+                    }}
+                    autoFocus
+                    className="input-column-name"
+                  />
+                  <button
+                    onClick={handleAddColumn}
+                    className="btn-confirm"
+                  >
+                    ✓
+                  </button>
+                  <button
+                    onClick={() => {
+                      setAddingColumn(false);
+                      setNewColumnName('');
+                    }}
+                    className="btn-cancel"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 分页控件 */}
+      {totalPages > 1 && (
+        <div className="pagination">
+          <button
+            onClick={() => setCurrentPage(1)}
+            disabled={currentPage === 1}
+          >
+            {'<<'}
+          </button>
+          <button
+            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+          >
+            {'<'}
+          </button>
+          
+          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+            const pageNum = Math.max(1, currentPage - 2) + i;
+            if (pageNum <= totalPages) return pageNum;
+            return null;
+          }).filter(Boolean).map((page) => (
+            <button
+              key={page}
+              onClick={() => setCurrentPage(page)}
+              className={page === currentPage ? 'active' : ''}
+            >
+              {page}
+            </button>
+          ))}
+          
+          <button
+            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages}
+          >
+            {'>'}
+          </button>
+          <button
+            onClick={() => setCurrentPage(totalPages)}
+            disabled={currentPage === totalPages}
+          >
+            {'>>'}
+          </button>
+          <span className="pagination-info">
+            Page {currentPage} of {totalPages}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default TableComponent;
