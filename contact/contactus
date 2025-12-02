@@ -150,3 +150,129 @@ export default MapTo("yourproject/components/contactus")(
 如你使用的是 AEM SPA Editor，AEM 会自动将 Sling Model 输出为 JSON：
 
 /content/.../contactus.model.json
+
+
+🎨 1. Contact Us 主组件 CSS（contactus.css）
+/* ===== Contact Us 主容器 ===== */
+.contact-us {
+    padding: 32px;
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    max-width: 960px;
+    margin: 0 auto;
+    font-family: "Helvetica", "Arial", sans-serif;
+}
+
+/* 标题 */
+.contact-us h2 {
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 24px;
+    color: #004a8f; /* HKEX 深蓝 */
+}
+
+/* 卡片容器 Grid */
+.contact-card-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+🎨 2. Contact Us 卡片 CSS（contactuscard.css）
+/* ===== 单个卡片 ===== */
+.contact-card {
+    background: #f7f9fc;
+    border-radius: 10px;
+    padding: 20px;
+    border: 1px solid #e5e9f2;
+    transition: all 0.25s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
+    min-height: 180px;
+}
+
+/* Hover 效果 */
+.contact-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+    background: #ffffff;
+}
+
+/* 卡片标题 */
+.contact-card h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #004a8f;
+    margin-bottom: 12px;
+}
+
+/* 描述 */
+.contact-card p {
+    flex: 1;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #333;
+    margin-bottom: 16px;
+}
+
+/* 按钮链接 */
+.contact-card a {
+    text-decoration: none;
+    color: white;
+    background: #0059b3;
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 14px;
+    text-align: center;
+    font-weight: 500;
+    transition: background 0.2s ease;
+}
+
+.contact-card a:hover {
+    background: #003d80;
+}
+
+📱 3. Mobile 响应式
+@media (max-width: 768px) {
+    .contact-us {
+        padding: 20px;
+    }
+
+    .contact-card {
+        padding: 16px;
+    }
+
+    .contact-card h3 {
+        font-size: 18px;
+    }
+}
+
+🧩 4. Modal 中 Contact Us 的布局（推荐加入）
+
+如果你的 Contact Us 会放在 Modal 内，建议用下面样式让它适应弹窗：
+
+/* Modal 内容容器 */
+.modal-body .contact-us {
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+/* 避免 Modal 太大 */
+.modal-body {
+    max-width: 960px;
+    width: 90%;
+    background: white;
+    padding: 32px;
+    border-radius: 12px;
+}
+
+✨ 效果特点
+功能	支持
+AEM SPA 编辑模式正常显示 overlay	✔
+Modal 内组件显示正常	✔
+卡片可增删，不破坏布局	✔
+响应式	✔
+设计风格类似 HKEX	✔
