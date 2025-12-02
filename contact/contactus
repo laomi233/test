@@ -1,0 +1,152 @@
+/apps/yourproject/components/contactus
+/apps/yourproject/components/contactuscard
+/ui.apps/src/main/content/jcr_root/apps/yourproject/components/contactus
+/ui.apps/src/main/content/jcr_root/apps/yourproject/components/contactuscard
+/ui.frontend/src/components/ContactUs
+/ui.frontend/src/components/ContactUsCard
+1. Contact Us 父组件 dialog
+
+允许编辑标题 + 卡片列表（使用 Multifield）
+
+contactus/_cq_dialog/.content.xml 示例：
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root
+    xmlns:sling="http://sling.apache.org/jcr/sling/1.0"
+    xmlns:jcr="http://www.jcp.org/jcr/1.0"
+    jcr:primaryType="nt:unstructured"
+    jcr:title="Contact Us"
+    sling:resourceType="cq/gui/components/authoring/dialog">
+
+    <content jcr:primaryType="nt:unstructured"
+             sling:resourceType="cq/gui/components/authoring/dialog/content">
+
+        <items jcr:primaryType="nt:unstructured">
+
+            <title jcr:primaryType="nt:unstructured"
+                   sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                   fieldLabel="Title"
+                   name="./title"/>
+
+            <cards jcr:primaryType="nt:unstructured"
+                   sling:resourceType="granite/ui/components/coral/foundation/form/multifield"
+                   composite="{Boolean}true"
+                   fieldLabel="Cards">
+
+                <field jcr:primaryType="nt:unstructured"
+                       sling:resourceType="granite/ui/components/coral/foundation/form/fieldset">
+
+                    <items jcr:primaryType="nt:unstructured">
+
+                        <cardTitle jcr:primaryType="nt:unstructured"
+                                   sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                                   fieldLabel="Card Title"
+                                   name="./cardTitle" />
+
+                        <cardDesc jcr:primaryType="nt:unstructured"
+                                  sling:resourceType="granite/ui/components/coral/foundation/form/textarea"
+                                  fieldLabel="Description"
+                                  name="./cardDesc" />
+
+                        <contactLink jcr:primaryType="nt:unstructured"
+                                     sling:resourceType="granite/ui/components/coral/foundation/form/pathfield"
+                                     fieldLabel="Link"
+                                     name="./contactLink" />
+
+                    </items>
+                </field>
+
+            </cards>
+
+        </items>
+
+    </content>
+</jcr:root>
+1. Card 模型
+
+ContactUsCard.java
+@Model(adaptables = Resource.class)
+public class ContactUsCard {
+
+    @Inject @Default(values = "")
+    private String cardTitle;
+
+    @Inject @Default(values = "")
+    private String cardDesc;
+
+    @Inject @Default(values = "")
+    private String contactLink;
+
+    public String getCardTitle() { return cardTitle; }
+    public String getCardDesc() { return cardDesc; }
+    public String getContactLink() { return contactLink; }
+}
+2. Contact Us 父模型
+@Model(adaptables = SlingHttpServletRequest.class,
+       adapters = ContactUsModel.class,
+       resourceType = "yourproject/components/contactus")
+public class ContactUsModel {
+
+    @Inject @Default(values = "")
+    private String title;
+
+    @Inject
+    @ChildResource(name = "cards")
+    private List<ContactUsCard> cards;
+
+    public String getTitle() { return title; }
+    public List<ContactUsCard> getCards() { return cards; }
+}
+✅ 四、React（AEM SPA Editor）前端组件
+1. ContactUsCard React Component
+
+ContactUsCard.js
+
+import React from "react";
+import { MapTo } from "@adobe/aem-react-editable-components";
+
+export const ContactUsCard = ({ cardTitle, cardDesc, contactLink }) => (
+    <div className="contact-card">
+        <h3>{cardTitle}</h3>
+        <p>{cardDesc}</p>
+        <a href={contactLink}>Learn More</a>
+    </div>
+);
+
+MapTo("yourproject/components/contactuscard")(ContactUsCard);
+
+2. ContactUs 父组件（React）
+
+ContactUs.js
+
+import React from "react";
+import { MapTo } from "@adobe/aem-react-editable-components";
+
+const ContactUsEditConfig = {
+    emptyLabel: "Contact Us",
+    isEmpty: (props) => !props || !props.cards || props.cards.length === 0
+};
+
+const ContactUs = ({ title, cards }) => (
+    <section className="contact-us">
+        <h2>{title}</h2>
+
+        <div className="contact-card-list">
+            {cards && cards.map((card, index) => (
+                <div key={index}>
+                    <card.cmp />
+                </div>
+            ))}
+        </div>
+    </section>
+);
+
+export default MapTo("yourproject/components/contactus")(
+    ContactUs,
+    ContactUsEditConfig
+);
+
+✅ 五、前端 JSON Model（AEM 自动生成）
+
+如你使用的是 AEM SPA Editor，AEM 会自动将 Sling Model 输出为 JSON：
+
+/content/.../contactus.model.json
