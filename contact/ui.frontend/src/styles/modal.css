@@ -1,0 +1,57 @@
+.header {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  background: #00437a;
+  color: #fff;
+}
+
+.header .logo {
+  font-weight: bold;
+  margin-right: auto;
+}
+
+.header .btn-contact {
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 999;
+}
+
+.modal {
+  position: fixed;
+  z-index: 1000;
+  left: 50%;
+  top: 50%;
+  min-width: 320px;
+  max-width: 600px;
+  background: #fff;
+  padding: 24px;
+  border-radius: 10px;
+  transform: translate(-50%, -50%) scale(0.8);
+  opacity: 0;
+  pointer-events: none;
+  transition: 0.15s ease-out;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+}
+
+.modal.open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.modal-close {
+  margin-top: 20px;
+}
+
+.contact-modal-inner h2 {
+  margin-top: 0;
+}
