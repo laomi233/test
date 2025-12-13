@@ -1,111 +1,156 @@
 /* =========================================================
-   1. Author Mode / Editor Styles (Excel-like Grid)
-   这些样式只在编辑模式下生效，目的是方便操作
+   1. Publish Mode / Final Styles (HSI Style from Screenshot)
+   这是最终用户看到的样式，复刻截图效果
    ========================================================= */
-.custom-table-editor-wrapper {
-    border: 2px dashed #ccc;
-    padding: 15px;
-    background: #fdfdfd;
-    overflow-x: auto;
-}
-
-.editor-toolbar {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 10px;
-    align-items: center;
-    background: #eee;
-    padding: 8px;
-    border-radius: 4px;
-}
-
-.btn-editor {
-    padding: 5px 12px;
-    border: 1px solid #999;
-    background: #fff;
-    cursor: pointer;
-    font-size: 13px;
-    border-radius: 3px;
-}
-.btn-editor:hover { background: #e6f7ff; border-color: #1890ff; }
-
-.btn-save { background: #28a745; color: white; border: none; }
-.btn-save:hover { background: #218838; }
-
-.editor-table {
+   .hsi-styled-table {
+    width: 100%;
     border-collapse: collapse;
-    width: auto; /* 编辑模式不需要 100% 宽度，防止太宽 */
+    font-family: Arial, Helvetica, sans-serif; /* 使用清晰的无衬线字体 */
+    text-align: left;
+    color: #333;
 }
 
-.editor-table th, .editor-table td {
-    border: 1px solid #aaa;
-    min-width: 100px;
-    height: 34px;
-    position: relative;
-    padding: 0;
-}
-
-.editor-table input {
-    width: 100%;
-    height: 100%;
-    border: none;
-    padding: 0 8px;
-    outline: none;
-    font-family: monospace;
-}
-
-.editor-table input:focus {
-    box-shadow: inset 0 0 0 2px #1890ff;
-    background: #e6f7ff;
-}
-
-/* 删除按钮 */
-.btn-del-col {
-    width: 100%;
-    border: none;
-    background: #ffe6e6;
-    color: red;
+/* 表头样式：深灰色背景，白色文字，加粗 */
+.hsi-styled-table thead th {
+    background-color: #5a5a5a; /* 截图中的深灰色 */
+    color: #ffffff;
     font-weight: bold;
-    cursor: pointer;
+    padding: 12px 15px;
+    border: none; /* 截图中无明显边框 */
 }
-.btn-del-row {
-    width: 30px;
-    height: 100%;
-    border: none;
-    background: #ffe6e6;
-    color: red;
-    font-weight: bold;
-    cursor: pointer;
-}
-.btn-del-col:hover, .btn-del-row:hover { background: red; color: white; }
 
-/* 预览切换 */
-.preview-toggle { margin-left: auto; font-size: 14px; cursor: pointer; user-select: none;}
+/* 表体样式：米色背景 */
+.hsi-styled-table tbody tr {
+    background-color: #f7f7e8; /* 截图中的米色背景 */
+}
+
+.hsi-styled-table tbody td {
+    padding: 12px 15px;
+    border: none; /* 截图中无明显边框 */
+}
+
+/* 预览模式容器 */
+.preview-mode-container {
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: border-color 0.3s;
+}
+.preview-mode-container:hover {
+    border-color: #007bff; /* hover时提示可以点击返回编辑 */
+}
 
 
 /* =========================================================
-   2. Publish Mode / Final Styles (Frontend Design)
-   这是最终用户看到的样式，你可以随意替换 CSS
+   2. Author Mode / Editor Styles (Interactive Grid)
+   编辑模式的样式，强调功能和选中状态
    ========================================================= */
-.frontend-table {
-    width: 100%;
+.custom-table-editor-wrapper {
+    border: 1px solid #ccc;
+    padding: 15px;
+    background: #fff;
+}
+
+/* --- 工具栏样式 --- */
+.editor-global-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.editor-context-toolbar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    padding: 10px;
+    background: #f0f0f0;
+    border-radius: 4px;
+    align-items: center;
+    transition: opacity 0.3s;
+}
+
+/* 未选中时工具栏变灰 */
+.editor-context-toolbar.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.toolbar-group {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+}
+.toolbar-group span {
+    font-weight: bold;
+    margin-right: 5px;
+    font-size: 12px;
+    color: #555;
+}
+.toolbar-separator {
+    width: 1px;
+    height: 24px;
+    background: #ccc;
+    margin: 0 10px;
+}
+
+.editor-context-toolbar button {
+    padding: 4px 8px;
+    font-size: 12px;
+    cursor: pointer;
+    border: 1px solid #999;
+    background: #fff;
+    border-radius: 3px;
+}
+.editor-context-toolbar button:hover { background-color: #e6f7ff; border-color: #007bff; }
+.editor-context-toolbar .btn-delete { color: red; border-color: #ffcccc; background: #fff5f5; }
+.editor-context-toolbar .btn-delete:hover { background: red; color: white; }
+
+.btn-save {
+    padding: 6px 12px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;
+}
+.btn-save:hover { background: #218838; }
+.preview-toggle { font-size: 14px; cursor: pointer; user-select: none; }
+
+/* --- 编辑表格样式 --- */
+.editor-table-container {
+    overflow-x: auto;
+    position: relative;
+}
+
+.editor-grid-table {
     border-collapse: collapse;
-    margin: 20px 0;
-    font-family: Arial, sans-serif;
-    box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    width: 100%;
 }
 
-.frontend-table thead tr {
-    background-color: #009879;
-    color: #ffffff;
-    text-align: left;
+.editor-grid-table td {
+    border: 1px solid #ccc;
+    padding: 0;
+    min-width: 100px;
+    height: 36px;
+    position: relative;
 }
 
-.frontend-table th, .frontend-table td {
-    padding: 12px 15px;
-    border-bottom: 1px solid #dddddd;
+/* 选中高亮样式 */
+.selected-cell {
+    box-shadow: inset 0 0 0 2px #007bff !important; /* 蓝色粗边框 */
+    z-index: 2;
+}
+.selected-row {
+    background-color: #e6f7ff; /* 选中行浅蓝色背景 */
+}
+.selected-col {
+    background-color: #f0f8ff; /* 选中列更浅的背景 */
 }
 
-.frontend-table tbody tr:nth-of-type(even) {
-    background-color: #f3f3f3;
+.editor-grid-table input {
+    width: 100%; height: 100%; border: none; padding: 8px; outline: none; font-family: monospace; background: transparent;
+}
+.editor-grid-table input:focus {
+    background-color: #fff; /* 输入时背景变白 */
+}
+
+.selection-hint {
+    margin-top: 5px; font-size: 12px; color: #666; text-align: right;
 }
