@@ -6,16 +6,17 @@ import './CustomTable.css';
 const CustomTableEditConfig = {
     emptyLabel: 'HSI Custom Table',
     isEmpty: function(props) {
-        return !props.tableData;
+        return !props.tableData || props.tableData.length === 0;
     }
 };
 
 const CustomTable = (props) => {
-    // [CRITICAL FIX] 1. 必须提取 AEM 传入的 className
-    // 这个 className 包含了 aem-Grid-column 等类名，没有它，编辑器无法定位组件
+    // [关键点 1] 提取 AEM 传入的关键属性
+    // className: 包含 aem-Grid-column 等布局类名
+    // cqPath: 组件在 JCR 中的路径
     const { className, tableData: propTableData, pagePath, itemPath } = props;
 
-    // 2. 数据初始化
+    // --- 数据初始化与逻辑 (与之前相同) ---
     const createDefaultData = () => [["Date", "Time"], ["Sat, Sun", "00:00 - 06:00"]];
     const [tableData, setTableData] = useState(() => {
         if (propTableData) {
@@ -28,8 +29,6 @@ const CustomTable = (props) => {
     const [isPreview, setIsPreview] = useState(false);
     const [selectedCell, setSelectedCell] = useState({ r: -1, c: -1 });
 
-    // --- 数据操作逻辑 ---
-    
     const updateCell = (r, c, val) => {
         const newData = [...tableData];
         newData[r] = [...newData[r]];
@@ -72,14 +71,12 @@ const CustomTable = (props) => {
         const formData = new FormData();
         formData.append('./tableData', JSON.stringify(tableData));
         try {
-            // 注意: 使用 itemPath 直接 POST
             await fetch(`${pagePath}/jcr:content/${itemPath}`, { method: 'POST', body: formData });
             alert("Saved!");
         } catch (e) { console.error(e); alert("Failed"); }
     }, [tableData, pagePath, itemPath]);
 
-
-    // --- 视图渲染 ---
+    // --- 渲染逻辑 ---
 
     const renderPublishView = () => (
         <table className="hsi-table">
@@ -97,20 +94,28 @@ const CustomTable = (props) => {
     const renderEditorView = () => {
         const hasSel = selectedCell.r !== -1;
         return (
-            <div className="editor-wrapper">
-                <div className="editor-toolbar">
-                    <button className="btn-save" onClick={saveToAEM}>💾 Save</button>
-                    <label><input type="checkbox" checked={isPreview} onChange={() => setIsPreview(!isPreview)}/> Preview</label>
+            // [关键点 2] 内部容器
+            // onMouseDown={(e) => e.stopPropagation()} 
+            // 阻止鼠标点击事件冒泡给 AEM。
+            // 这样当你点击 input 或 按钮时，AEM 不会认为你想“拖拽”组件，从而允许你输入文字。
+            <div className="editor-wrapper" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
+                
+                <div className="editor-header">
+                    <span className="editor-title">Editing Table Data</span>
+                    <div className="editor-controls">
+                        <label><input type="checkbox" checked={isPreview} onChange={() => setIsPreview(!isPreview)}/> Preview</label>
+                        <button className="btn-save" onClick={saveToAEM}>💾 Save</button>
+                    </div>
                 </div>
                 
                 <div className={`context-tools ${hasSel ? '' : 'disabled'}`}>
                     <span>Row: </span>
-                    <button onClick={() => insertRow(selectedCell.r, 'before')}>↑ Add</button>
-                    <button onClick={() => insertRow(selectedCell.r, 'after')}>↓ Add</button>
+                    <button onClick={() => insertRow(selectedCell.r, 'before')}>↑</button>
+                    <button onClick={() => insertRow(selectedCell.r, 'after')}>↓</button>
                     <button onClick={() => deleteRow(selectedCell.r)} className="btn-del">×</button>
                     <span style={{marginLeft:10}}>Col: </span>
-                    <button onClick={() => insertCol(selectedCell.c, 'before')}>← Add</button>
-                    <button onClick={() => insertCol(selectedCell.c, 'after')}>→ Add</button>
+                    <button onClick={() => insertCol(selectedCell.c, 'before')}>←</button>
+                    <button onClick={() => insertCol(selectedCell.c, 'after')}>→</button>
                     <button onClick={() => deleteCol(selectedCell.c)} className="btn-del">×</button>
                 </div>
 
@@ -122,8 +127,14 @@ const CustomTable = (props) => {
                                     {row.map((cell, c) => (
                                         <td key={`${r}-${c}`} 
                                             className={selectedCell.r === r && selectedCell.c === c ? 'active' : ''}
+                                            // 点击选中单元格
                                             onClick={() => setSelectedCell({r, c})}>
-                                            <input value={cell} onChange={e => updateCell(r, c, e.target.value)} />
+                                            <input 
+                                                value={cell} 
+                                                onChange={e => updateCell(r, c, e.target.value)} 
+                                                // 确保输入框获取焦点
+                                                onFocus={(e) => e.target.select()}
+                                            />
                                         </td>
                                     ))}
                                 </tr>
@@ -131,23 +142,36 @@ const CustomTable = (props) => {
                         </tbody>
                     </table>
                 </div>
+                <div className="editor-footer-hint">
+                    * Click outside or on the border to select the component for deletion/moving.
+                </div>
             </div>
         );
     };
 
-    // [CRITICAL FIX] 3. 根元素必须应用 props.className
-    // 如果没有这一行，Content Tree 找不到它，也无法拖拽
-    const containerClass = `${className || ''} custom-table-component`;
-
+    // [关键点 3] 主容器逻辑
+    // 如果是 Author 模式，必须渲染一个包裹 div，并将 props.className 赋给它。
+    // 这让 AEM 知道这个 DOM 元素对应哪个 JCR 节点。
+    
     if (!isInEditor) {
-        return <div className={containerClass}>{renderPublishView()}</div>;
+        return <div className={className}>{renderPublishView()}</div>;
     }
 
     return (
-        <div className={containerClass}>
-            {isPreview ? (
-                <div onClick={() => setIsPreview(false)} title="Click to edit">{renderPublishView()}</div>
-            ) : renderEditorView()}
+        // 外层 DIV：负责与 AEM 交互 (拖拽、蓝框、Toolbar)
+        // 这里的 className 是 AEM 传进来的，必须加上！
+        <div className={`${className} custom-table-author-container`}>
+            
+            {/* 只有在非预览模式下才渲染复杂的编辑器 */}
+            { !isPreview ? renderEditorView() : (
+                <div className="preview-mode-wrapper">
+                     {/* 预览模式的切换按钮 */}
+                     <div className="preview-toolbar">
+                        <label><input type="checkbox" checked={isPreview} onChange={() => setIsPreview(!isPreview)}/> Return to Edit</label>
+                     </div>
+                     {renderPublishView()}
+                </div>
+            )}
         </div>
     );
 };
