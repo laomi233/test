@@ -154,3 +154,31 @@
 .selection-hint {
     margin-top: 5px; font-size: 12px; color: #666; text-align: right;
 }
+
+
+/* HSI Style (Publish View) */
+.hsi-table {
+    width: 100%; border-collapse: collapse; font-family: Arial, sans-serif;
+}
+.hsi-table th {
+    background: #5a5a5a; color: #fff; padding: 12px; text-align: left; font-weight: bold;
+}
+.hsi-table td {
+    background: #f7f7e8; color: #333; padding: 12px; border-bottom: 1px solid #e0e0e0;
+}
+
+/* Editor Style */
+.custom-table-component { min-height: 50px; } /* 防止空的时候缩成一点点 */
+.editor-wrapper { border: 2px dashed #ccc; padding: 10px; background: #fff; }
+.editor-toolbar { display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px;}
+.context-tools { background: #f0f0f0; padding: 5px; margin-bottom: 10px; border-radius: 4px; display: flex; gap: 5px; align-items: center;}
+.context-tools.disabled { opacity: 0.5; pointer-events: none; }
+.context-tools button { cursor: pointer; padding: 2px 8px; border: 1px solid #999; border-radius: 3px;}
+.btn-del { color: red; border-color: pink !important; background: #fff5f5; }
+.btn-save { background: #28a745; color: white; border: none; padding: 5px 15px; cursor: pointer;}
+
+.editor-grid { border-collapse: collapse; }
+.editor-grid td { border: 1px solid #ccc; padding: 0; width: 100px; height: 30px; }
+.editor-grid td.active { outline: 2px solid #007bff; z-index: 10; }
+.editor-grid input { width: 100%; height: 100%; border: none; padding: 5px; box-sizing: border-box; }
+.editor-grid input:focus { background: #e6f7ff; outline: none; }
