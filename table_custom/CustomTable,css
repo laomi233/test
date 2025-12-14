@@ -243,3 +243,44 @@
 .preview-toolbar {
     background: #333; color: #fff; padding: 5px 10px; margin-bottom: 10px; border-radius: 3px; display: inline-block;
 }
+
+
+
+/* Publish Style */
+.hsi-table { width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; }
+.hsi-table th { background: #5a5a5a; color: #fff; padding: 12px; text-align: left; }
+.hsi-table td { background: #f7f7e8; color: #333; padding: 12px; border-bottom: 1px solid #ddd; }
+
+/* Author Style */
+.author-container {
+    /* 给组件一个最小高度，并留出边缘 Padding 供用户点击以唤起 AEM Toolbar */
+    min-height: 80px;
+    padding: 10px; 
+    border: 1px dashed transparent;
+    position: relative;
+    transition: border 0.3s;
+}
+.author-container:hover {
+    border-color: #bbb; /* 提示用户这是个组件范围 */
+}
+
+.internal-editor {
+    background: #fff;
+    border: 1px solid #ccc;
+    padding: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    /* 确保内部编辑器位于 AEM Overlay 之上(如果需要穿透) */
+    position: relative;
+    z-index: 10; 
+}
+
+.editor-bar { display: flex; justify-content: space-between; margin-bottom: 8px; }
+.btn-save { background: #28a745; color: white; border: none; padding: 4px 10px; cursor: pointer; }
+.tools { background: #f4f4f4; padding: 5px; margin-bottom: 8px; display: flex; gap: 4px; }
+.tools.disabled { opacity: 0.5; pointer-events: none; }
+.btn-del { color: red; background: #fff0f0; border-color: pink; }
+
+.editor-grid { border-collapse: collapse; }
+.editor-grid td { border: 1px solid #ccc; min-width: 80px; height: 30px; padding: 0; }
+.editor-grid td.sel { outline: 2px solid #007bff; z-index: 5; }
+.editor-grid input { width: 100%; height: 100%; border: none; padding: 5px; outline: none; }
