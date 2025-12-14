@@ -1,64 +1,91 @@
-/* 触发按钮样式 (可以根据 header 样式调整) */
-.contact-trigger-btn {
-    background: transparent;
-    border: 1px solid #333;
-    padding: 8px 16px;
-    cursor: pointer;
-    font-weight: bold;
-    text-transform: uppercase;
-    transition: all 0.3s;
-}
-.contact-trigger-btn:hover {
-    background: #333;
-    color: #fff;
+/* ========================
+   Publish Mode (正常样式)
+   ======================== */
+   .contact-modal-wrapper {
+    display: inline-block; /* 或者 block，视布局而定 */
 }
 
-/* Modal 遮罩层 */
+.contact-trigger-btn {
+    background: transparent; border: 1px solid #333; padding: 8px 16px;
+    cursor: pointer; font-weight: bold; text-transform: uppercase;
+}
+.contact-trigger-btn:hover { background: #333; color: #fff; }
+
 .hsi-modal-overlay {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
     background-color: rgba(0, 0, 0, 0.6);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999; /* 确保在最上层 */
-    opacity: 0;
+    display: flex; justify-content: center; align-items: center;
+    z-index: 10000; /* 最高层级 */
     animation: fadeIn 0.3s forwards;
 }
 
-/* Modal 内容框 */
 .hsi-modal-content {
-    background: #fff;
-    width: 90%;
-    max-width: 600px; /* HSI 风格的宽度 */
-    max-height: 90vh;
-    overflow-y: auto;
-    padding: 30px;
-    position: relative;
+    background: #fff; width: 90%; max-width: 600px; max-height: 90vh;
+    overflow-y: auto; padding: 30px; position: relative;
     box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-    transform: translateY(-20px);
+    z-index: 10001;
     animation: slideDown 0.3s forwards;
 }
 
-/* 头部 */
-.hsi-modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 10px;
-}
-.hsi-modal-header h2 { margin: 0; font-size: 24px; color: #333; }
+.hsi-modal-header { display: flex; justify-content: space-between; margin-bottom: 20px; border-bottom: 1px solid #eee; }
+.hsi-close-btn { font-size: 28px; cursor: pointer; border: none; background: none; }
+.hsi-modal-body { min-height: 50px; }
 
-/* 关闭按钮 */
-.hsi-close-btn {
-    background: none; border: none; font-size: 28px; cursor: pointer; color: #999;
-}
-.hsi-close-btn:hover { color: #333; }
 
-/* 容器区域 (用于拖拽其他组件) */
-.hsi-modal-body { min-height: 100px; }
+/* =========================================
+   AEM Author Mode Fixes (编辑模式专用修复)
+   ========================================= */
+
+/* 1. 修复 Wrapper 高度无限增加问题 */
+body.cq-wcm-edit-mode .contact-modal-wrapper {
+    height: auto !important;
+    min-height: 50px !important;
+    display: block !important;
+    overflow: visible !important;
+    border: 1px dashed transparent; /* 占位符 */
+}
+
+/* 2. 辅助按钮样式 */
+.author-helper-text {
+    margin-top: 5px; font-size: 12px; color: #007bff; cursor: pointer;
+    text-decoration: underline; background: rgba(255,255,255,0.8);
+    padding: 2px; display: inline-block;
+}
+
+/* 3. [关键] 解决无法拖拽/编辑的问题 */
+/* 当在编辑模式下，我们降低 z-index，让 AEM 的 UI (通常 z-index ~800-1000) 能显示出来 */
+
+body.cq-wcm-edit-mode .hsi-modal-overlay {
+    /* 降低层级：必须低于 AEM 的拖拽 Overlay (约 900) */
+    z-index: 500 !important;
+    
+    /* 让背景淡一点，方便看清后面 */
+    background-color: rgba(0, 0, 0, 0.2); 
+    
+    /* [核心] 让鼠标穿透遮罩层，否则你拖组件的时候会被遮罩层挡住 */
+    pointer-events: none; 
+}
+
+body.cq-wcm-edit-mode .hsi-modal-content {
+    /* 内容框必须恢复交互，否则不能点击里面的组件 */
+    pointer-events: auto;
+    
+    /* 层级略高于遮罩层，但仍需注意不要挡住 AEM Toolbar */
+    z-index: 501 !important;
+    
+    /* 加个边框提示这是编辑状态 */
+    border: 2px dashed orange; 
+}
+
+/* 4. 强制显示 AEM 的 "Drag components here" 占位符 */
+body.cq-wcm-edit-mode .hsi-modal-body .aem-Grid-newComponent {
+    display: block !important;
+    width: 100%;
+    height: 50px;
+    background-color: #f0f0f0;
+    border: 1px dashed #ccc;
+    margin-top: 10px;
+}
 
 @keyframes fadeIn { to { opacity: 1; } }
 @keyframes slideDown { to { transform: translateY(0); } }
