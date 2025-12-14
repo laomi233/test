@@ -5,36 +5,14 @@
           xmlns:nt="http://www.jcp.org/jcr/nt/1.0"
     jcr:primaryType="cq:EditConfig">
 
-    <cq:actionConfigs jcr:primaryType="nt:unstructured">
-        <text jcr:primaryType="nt:unstructured" text="HSI Custom Table"/>
-        <edit jcr:primaryType="nt:unstructured" handler="CQ.wcm.edit.EditBase.edit"/>
-        <delete jcr:primaryType="nt:unstructured" handler="CQ.wcm.edit.EditBase.delete"/>
-        <insert jcr:primaryType="nt:unstructured" handler="CQ.wcm.edit.EditBase.insert"/>
-        <copymove jcr:primaryType="nt:unstructured" handler="CQ.wcm.edit.EditBase.copyMove"/>
-    </cq:actionConfigs>
-
     <cq:listeners jcr:primaryType="cq:EditListenersConfig"
         afterdelete="REFRESH_PARENT"
         afteredit="REFRESH_PAGE"
         afterinsert="REFRESH_PARENT"
         aftermove="REFRESH_PARENT"/>
-</jcr:root>
 
-
-
-<?xml version="1.0" encoding="UTF-8"?>
-<jcr:root xmlns:sling="http://sling.apache.org/jcr/sling/1.0" 
-          xmlns:cq="http://www.day.com/jcr/cq/1.0" 
-          xmlns:jcr="http://www.jcp.org/jcr/1.0" 
-          xmlns:nt="http://www.jcp.org/jcr/nt/1.0"
-    jcr:primaryType="cq:EditConfig">
-    <cq:listeners jcr:primaryType="cq:EditListenersConfig"
-        afterdelete="REFRESH_PARENT"
-        afteredit="REFRESH_PAGE"
-        afterinsert="REFRESH_PARENT"
-        aftermove="REFRESH_PARENT"/>
     <cq:actionConfigs jcr:primaryType="nt:unstructured">
-        <text jcr:primaryType="nt:unstructured" text="Table Component"/>
+        <text jcr:primaryType="nt:unstructured" text="HSI Table Container"/>
         <edit jcr:primaryType="nt:unstructured" handler="CQ.wcm.edit.EditBase.edit"/>
         <delete jcr:primaryType="nt:unstructured" handler="CQ.wcm.edit.EditBase.delete"/>
         <insert jcr:primaryType="nt:unstructured" handler="CQ.wcm.edit.EditBase.insert"/>
