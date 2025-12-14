@@ -1,162 +1,97 @@
 import React, { useState, useCallback } from 'react';
 import { MapTo } from '@adobe/aem-react-editable-components';
 import { AuthoringUtils } from '@adobe/aem-spa-page-model-manager';
+import PureTable from './PureTable'; // 引入上面的纯组件
 import './CustomTable.css';
 
+// 1. AEM 编辑配置
 const CustomTableEditConfig = {
-    emptyLabel: 'HSI Custom Table',
+    emptyLabel: 'HSI Custom Table (Container)',
     isEmpty: function(props) {
         return !props.tableData || props.tableData.length === 0;
     }
 };
 
 const CustomTable = (props) => {
-    // [关键点1] 提取 AEM 传入的 props
-    // cqPath: 用于生成 data-cq-data-path
-    // className: 用于 AEM Grid 布局
+    // 2. 解构 AEM 属性
+    // [重要] 这里是 Wrapper 的属性，也就是 AEM 容器的属性
     const { className, cqPath, tableData: propTableData, pagePath, itemPath } = props;
 
-    // --- 数据逻辑 Start ---
+    // 数据解析
     const createDefaultData = () => [["Date", "Time"], ["Sat, Sun", "00:00 - 06:00"]];
-    const [tableData, setTableData] = useState(() => {
-        if (propTableData) {
-            try { return JSON.parse(propTableData); } catch (e) { return createDefaultData(); }
-        }
-        return createDefaultData();
-    });
+    const initialData = propTableData ? JSON.parse(propTableData) : createDefaultData();
+
     const isInEditor = AuthoringUtils.isInEditor();
-    const [isPreview, setIsPreview] = useState(false);
-    const [selectedCell, setSelectedCell] = useState({ r: -1, c: -1 });
+    const [isEditing, setIsEditing] = useState(false);
 
-    const updateCell = (r, c, val) => {
-        const newData = [...tableData];
-        newData[r] = [...newData[r]];
-        newData[r][c] = val;
-        setTableData(newData);
-    };
-
-    const insertRow = (rIndex, pos) => {
-        if (rIndex === -1) return;
-        const colCount = tableData[0].length;
-        const newData = [...tableData];
-        newData.splice(pos === 'after' ? rIndex + 1 : rIndex, 0, Array(colCount).fill(""));
-        setTableData(newData);
-    };
-
-    const deleteRow = (rIndex) => {
-        if (tableData.length <= 1) return alert("Min 1 row");
-        setTableData(tableData.filter((_, i) => i !== rIndex));
-        setSelectedCell({ r: -1, c: -1 });
-    };
-
-    const insertCol = (cIndex, pos) => {
-        if (cIndex === -1) return;
-        const targetPos = pos === 'after' ? cIndex + 1 : cIndex;
-        setTableData(tableData.map(row => {
-            const newRow = [...row];
-            newRow.splice(targetPos, 0, "");
-            return newRow;
-        }));
-    };
-
-    const deleteCol = (cIndex) => {
-        if (tableData[0].length <= 1) return alert("Min 1 col");
-        setTableData(tableData.map(row => row.filter((_, i) => i !== cIndex)));
-        setSelectedCell({ r: -1, c: -1 });
-    };
-
-    const saveToAEM = useCallback(async () => {
+    // 保存逻辑：由 Wrapper 负责与 AEM 后端通信
+    const handleSaveToAEM = useCallback(async (newData) => {
         if (!pagePath || !itemPath) return;
         const formData = new FormData();
-        formData.append('./tableData', JSON.stringify(tableData));
+        formData.append('./tableData', JSON.stringify(newData));
         try {
             await fetch(`${pagePath}/jcr:content/${itemPath}`, { method: 'POST', body: formData });
-            alert("Saved!");
-        } catch (e) { console.error(e); }
-    }, [tableData, pagePath, itemPath]);
-    // --- 数据逻辑 End ---
+            setIsEditing(false); // 保存成功后退出编辑模式
+        } catch (e) { console.error("Save failed", e); }
+    }, [pagePath, itemPath]);
 
-    // 渲染发布态 (Clean HTML)
-    const renderPublishView = () => (
-        <table className="hsi-table">
-            <thead>
-                {tableData.length > 0 && <tr>{tableData[0].map((c, i) => <th key={i}>{c}</th>)}</tr>}
-            </thead>
-            <tbody>
-                {tableData.slice(1).map((row, r) => (
-                    <tr key={r}>{row.map((c, i) => <td key={i}>{c}</td>)}</tr>
-                ))}
-            </tbody>
-        </table>
-    );
 
-    // 渲染编辑器 (Complex UI)
-    const renderEditorView = () => {
-        const hasSel = selectedCell.r !== -1;
+    // ============================================================
+    // 3. 渲染逻辑：Container 模式
+    // ============================================================
+
+    // Publish 模式：直接渲染内容，去掉外壳
+    if (!isInEditor) {
         return (
-            // [关键点2] 内部编辑器阻断事件冒泡
-            // 这使得点击表格内部时，不会触发 AEM 的 Drag 逻辑，从而允许 Input 输入
-            <div className="internal-editor" 
-                 onMouseDown={e => e.stopPropagation()} 
-                 onClick={e => e.stopPropagation()}>
-                
-                <div className="editor-bar">
-                    <button className="btn-save" onClick={saveToAEM}>💾 Save</button>
-                    <label><input type="checkbox" checked={isPreview} onChange={() => setIsPreview(!isPreview)}/> Preview</label>
-                </div>
-
-                <div className={`tools ${hasSel ? '' : 'disabled'}`}>
-                    <span>Row:</span>
-                    <button onClick={() => insertRow(selectedCell.r, 'before')}>↑</button>
-                    <button onClick={() => insertRow(selectedCell.r, 'after')}>↓</button>
-                    <button onClick={() => deleteRow(selectedCell.r)} className="btn-del">×</button>
-                    <span style={{marginLeft:8}}>Col:</span>
-                    <button onClick={() => insertCol(selectedCell.c, 'before')}>←</button>
-                    <button onClick={() => insertCol(selectedCell.c, 'after')}>→</button>
-                    <button onClick={() => deleteCol(selectedCell.c)} className="btn-del">×</button>
-                </div>
-
-                <div className="grid-scroll">
-                    <table className="editor-grid">
-                        <tbody>
-                            {tableData.map((row, r) => (
-                                <tr key={r}>
-                                    {row.map((cell, c) => (
-                                        <td key={`${r}-${c}`} className={selectedCell.r === r && selectedCell.c === c ? 'sel' : ''}
-                                            onClick={() => setSelectedCell({r, c})}>
-                                            <input value={cell} onChange={e => updateCell(r, c, e.target.value)} />
-                                        </td>
-                                    ))}
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        );
-    };
-
-    // [关键点3] 根返回逻辑
-    // 如果没有 data-cq-data-path，AEM 编辑器就找不到这个组件，Toolbar 就不会显示
-    if (isInEditor) {
-        return (
-            <div 
-                // AEM 必须的类名
-                className={`${className || ''} author-container`}
-                // AEM 必须的数据路径
-                data-cq-data-path={cqPath}
-            >
-                {/* 提示用户点击边缘来选中组件 */}
-                <div className="selection-border-hint"></div>
-
-                {isPreview ? (
-                    <div onClick={() => setIsPreview(false)}>{renderPublishView()}</div>
-                ) : renderEditorView()}
+            <div className={className}>
+                <PureTable initialData={initialData} isEditing={false} />
             </div>
         );
     }
 
-    return <div className={className}>{renderPublishView()}</div>;
+    // Author 模式：渲染一个“容器” DIV
+    return (
+        <div 
+            // [核心 A] 必须透传 className (aem-Grid-column...)
+            className={`${className || ''} aem-table-container-wrapper`}
+            
+            // [核心 B] 必须绑定 data-cq-data-path
+            data-cq-data-path={cqPath}
+            
+            // [核心 C] 样式：必须给一点 padding，让用户能点到“容器”本身
+            // 只有点到这个 div（蓝框区域），AEM Toolbar 才会出来
+            style={{ 
+                position: 'relative', 
+                minHeight: '100px', 
+                border: '1px solid transparent', // 占位边框
+                padding: '5px' 
+            }}
+        >
+            {/* 视觉提示：告诉用户这是一个 AEM 组件区域 */}
+            <div className="aem-wrapper-label">AEM Table Container</div>
+
+            {/* 内层组件：完全不知道 AEM 的存在 */}
+            <PureTable 
+                initialData={initialData} 
+                onSave={handleSaveToAEM}
+                isEditing={isEditing} 
+                setEditingMode={setIsEditing}
+            />
+
+            {/* 进入编辑模式的按钮 (悬浮在容器右上角) */}
+            {!isEditing && (
+                <button 
+                    className="btn-trigger-edit"
+                    onClick={(e) => {
+                        e.stopPropagation(); // 阻止冒泡，不让 AEM 选中
+                        setIsEditing(true);
+                    }}
+                >
+                    Edit Content
+                </button>
+            )}
+        </div>
+    );
 };
 
 export default MapTo('my-project/components/custom-table')(CustomTable, CustomTableEditConfig);

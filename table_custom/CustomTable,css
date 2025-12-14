@@ -1,286 +1,44 @@
-/* =========================================================
-   1. Publish Mode / Final Styles (HSI Style from Screenshot)
-   这是最终用户看到的样式，复刻截图效果
-   ========================================================= */
-   .hsi-styled-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-family: Arial, Helvetica, sans-serif; /* 使用清晰的无衬线字体 */
-    text-align: left;
-    color: #333;
-}
-
-/* 表头样式：深灰色背景，白色文字，加粗 */
-.hsi-styled-table thead th {
-    background-color: #5a5a5a; /* 截图中的深灰色 */
-    color: #ffffff;
-    font-weight: bold;
-    padding: 12px 15px;
-    border: none; /* 截图中无明显边框 */
-}
-
-/* 表体样式：米色背景 */
-.hsi-styled-table tbody tr {
-    background-color: #f7f7e8; /* 截图中的米色背景 */
-}
-
-.hsi-styled-table tbody td {
-    padding: 12px 15px;
-    border: none; /* 截图中无明显边框 */
-}
-
-/* 预览模式容器 */
-.preview-mode-container {
-    cursor: pointer;
-    border: 2px solid transparent;
-    transition: border-color 0.3s;
-}
-.preview-mode-container:hover {
-    border-color: #007bff; /* hover时提示可以点击返回编辑 */
-}
-
-
-/* =========================================================
-   2. Author Mode / Editor Styles (Interactive Grid)
-   编辑模式的样式，强调功能和选中状态
-   ========================================================= */
-.custom-table-editor-wrapper {
-    border: 1px solid #ccc;
-    padding: 15px;
-    background: #fff;
-}
-
-/* --- 工具栏样式 --- */
-.editor-global-toolbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #eee;
-}
-
-.editor-context-toolbar {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
-    padding: 10px;
-    background: #f0f0f0;
-    border-radius: 4px;
-    align-items: center;
-    transition: opacity 0.3s;
-}
-
-/* 未选中时工具栏变灰 */
-.editor-context-toolbar.disabled {
-    opacity: 0.5;
-    pointer-events: none;
-}
-
-.toolbar-group {
-    display: flex;
-    gap: 5px;
-    align-items: center;
-}
-.toolbar-group span {
-    font-weight: bold;
-    margin-right: 5px;
-    font-size: 12px;
-    color: #555;
-}
-.toolbar-separator {
-    width: 1px;
-    height: 24px;
-    background: #ccc;
-    margin: 0 10px;
-}
-
-.editor-context-toolbar button {
-    padding: 4px 8px;
-    font-size: 12px;
-    cursor: pointer;
-    border: 1px solid #999;
-    background: #fff;
-    border-radius: 3px;
-}
-.editor-context-toolbar button:hover { background-color: #e6f7ff; border-color: #007bff; }
-.editor-context-toolbar .btn-delete { color: red; border-color: #ffcccc; background: #fff5f5; }
-.editor-context-toolbar .btn-delete:hover { background: red; color: white; }
-
-.btn-save {
-    padding: 6px 12px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;
-}
-.btn-save:hover { background: #218838; }
-.preview-toggle { font-size: 14px; cursor: pointer; user-select: none; }
-
-/* --- 编辑表格样式 --- */
-.editor-table-container {
-    overflow-x: auto;
-    position: relative;
-}
-
-.editor-grid-table {
-    border-collapse: collapse;
-    width: 100%;
-}
-
-.editor-grid-table td {
-    border: 1px solid #ccc;
-    padding: 0;
-    min-width: 100px;
-    height: 36px;
-    position: relative;
-}
-
-/* 选中高亮样式 */
-.selected-cell {
-    box-shadow: inset 0 0 0 2px #007bff !important; /* 蓝色粗边框 */
-    z-index: 2;
-}
-.selected-row {
-    background-color: #e6f7ff; /* 选中行浅蓝色背景 */
-}
-.selected-col {
-    background-color: #f0f8ff; /* 选中列更浅的背景 */
-}
-
-.editor-grid-table input {
-    width: 100%; height: 100%; border: none; padding: 8px; outline: none; font-family: monospace; background: transparent;
-}
-.editor-grid-table input:focus {
-    background-color: #fff; /* 输入时背景变白 */
-}
-
-.selection-hint {
-    margin-top: 5px; font-size: 12px; color: #666; text-align: right;
-}
-
-
-/* HSI Style (Publish View) */
-.hsi-table {
-    width: 100%; border-collapse: collapse; font-family: Arial, sans-serif;
-}
-.hsi-table th {
-    background: #5a5a5a; color: #fff; padding: 12px; text-align: left; font-weight: bold;
-}
-.hsi-table td {
-    background: #f7f7e8; color: #333; padding: 12px; border-bottom: 1px solid #e0e0e0;
-}
-
-/* Editor Style */
-.custom-table-component { min-height: 50px; } /* 防止空的时候缩成一点点 */
-.editor-wrapper { border: 2px dashed #ccc; padding: 10px; background: #fff; }
-.editor-toolbar { display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px;}
-.context-tools { background: #f0f0f0; padding: 5px; margin-bottom: 10px; border-radius: 4px; display: flex; gap: 5px; align-items: center;}
-.context-tools.disabled { opacity: 0.5; pointer-events: none; }
-.context-tools button { cursor: pointer; padding: 2px 8px; border: 1px solid #999; border-radius: 3px;}
-.btn-del { color: red; border-color: pink !important; background: #fff5f5; }
-.btn-save { background: #28a745; color: white; border: none; padding: 5px 15px; cursor: pointer;}
-
-.editor-grid { border-collapse: collapse; }
-.editor-grid td { border: 1px solid #ccc; padding: 0; width: 100px; height: 30px; }
-.editor-grid td.active { outline: 2px solid #007bff; z-index: 10; }
-.editor-grid input { width: 100%; height: 100%; border: none; padding: 5px; box-sizing: border-box; }
-.editor-grid input:focus { background: #e6f7ff; outline: none; }
-
-
-/* Publish View (HSI Style) */
-.hsi-table { width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; }
-.hsi-table th { background: #5a5a5a; color: #fff; padding: 12px; text-align: left; font-weight: bold; }
-.hsi-table td { background: #f7f7e8; color: #333; padding: 12px; border-bottom: 1px solid #e0e0e0; }
-
-/* =========================================
-   Author Mode Styles
-   ========================================= */
-
-/* 外层容器：AEM 通过这个框来定位组件 */
-.custom-table-author-container {
-    min-height: 50px;
-    position: relative;
-    /* 给他一点 padding，这样用户容易点到边缘来选中整个组件 */
-    padding: 5px; 
-    border: 1px solid transparent; 
-}
-/* 当组件被 AEM 选中时，通常会有 blue border，这里我们可以做个 hover 提示 */
-.custom-table-author-container:hover {
-    border-color: #ddd;
-}
-
-/* 内部编辑器容器：这里面是你的 Excel 界面 */
-.editor-wrapper {
-    background: #fff;
-    border: 2px solid #ccc;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    padding: 10px;
-    z-index: 100; /* 确保它浮在 AEM 某些层之上 */
-    position: relative;
-}
-
-.editor-header {
-    display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px solid #eee;
-}
-.editor-title { font-weight: bold; color: #555; font-size: 14px; }
-.editor-controls { display: flex; gap: 10px; align-items: center; }
-
-/* 工具栏 */
-.context-tools { background: #f0f0f0; padding: 5px; margin-bottom: 10px; border-radius: 4px; display: flex; gap: 5px; align-items: center; }
-.context-tools.disabled { opacity: 0.5; pointer-events: none; }
-.context-tools button { cursor: pointer; min-width: 24px; border: 1px solid #999; border-radius: 3px; background: #fff; }
-.btn-del { color: red; border-color: #ffcccc !important; background: #fff5f5; font-weight: bold;}
-.btn-save { background: #28a745; color: white; border: none; padding: 4px 12px; border-radius: 3px; cursor: pointer; }
-
-/* 表格编辑网格 */
-.table-scroll { overflow-x: auto; max-width: 100%; }
-.editor-grid { border-collapse: collapse; width: 100%; }
-.editor-grid td { border: 1px solid #bbb; padding: 0; min-width: 80px; height: 32px; position: relative;}
-.editor-grid td.active { outline: 2px solid #007bff; z-index: 10; }
-.editor-grid input { width: 100%; height: 100%; border: none; padding: 0 8px; font-family: monospace; outline: none; display: block;}
-.editor-grid input:focus { background: #e6f7ff; }
-
-.editor-footer-hint { margin-top: 8px; font-size: 11px; color: #888; text-align: center; font-style: italic;}
-
-/* 预览模式下的 Toolbar */
-.preview-toolbar {
-    background: #333; color: #fff; padding: 5px 10px; margin-bottom: 10px; border-radius: 3px; display: inline-block;
-}
-
-
-
-/* Publish Style */
-.hsi-table { width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; }
-.hsi-table th { background: #5a5a5a; color: #fff; padding: 12px; text-align: left; }
-.hsi-table td { background: #f7f7e8; color: #333; padding: 12px; border-bottom: 1px solid #ddd; }
-
-/* Author Style */
-.author-container {
-    /* 给组件一个最小高度，并留出边缘 Padding 供用户点击以唤起 AEM Toolbar */
-    min-height: 80px;
-    padding: 10px; 
-    border: 1px dashed transparent;
-    position: relative;
+/* Wrapper 样式：让 AEM 蓝框好看点 */
+.aem-table-container-wrapper {
+    background-color: transparent;
     transition: border 0.3s;
 }
-.author-container:hover {
-    border-color: #bbb; /* 提示用户这是个组件范围 */
+.aem-table-container-wrapper:hover {
+    border-color: #ddd; /* 鼠标划过显示虚框，提示用户这里是容器 */
 }
 
-.internal-editor {
-    background: #fff;
-    border: 1px solid #ccc;
+/* 一个小的 label，提示用户点哪里可以选中组件 */
+.aem-wrapper-label {
+    font-size: 10px;
+    color: #ccc;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+    user-select: none;
+}
+
+/* 触发编辑的按钮 */
+.btn-trigger-edit {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    z-index: 100; /* 高于 AEM Overlay */
+    padding: 5px 10px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+/* 纯表格样式 */
+.pure-table-editor {
+    background: white;
+    border: 2px solid #007bff;
     padding: 10px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    /* 确保内部编辑器位于 AEM Overlay 之上(如果需要穿透) */
     position: relative;
-    z-index: 10; 
+    z-index: 200; /* 编辑时覆盖一切 */
 }
 
-.editor-bar { display: flex; justify-content: space-between; margin-bottom: 8px; }
-.btn-save { background: #28a745; color: white; border: none; padding: 4px 10px; cursor: pointer; }
-.tools { background: #f4f4f4; padding: 5px; margin-bottom: 8px; display: flex; gap: 4px; }
-.tools.disabled { opacity: 0.5; pointer-events: none; }
-.btn-del { color: red; background: #fff0f0; border-color: pink; }
-
-.editor-grid { border-collapse: collapse; }
-.editor-grid td { border: 1px solid #ccc; min-width: 80px; height: 30px; padding: 0; }
-.editor-grid td.sel { outline: 2px solid #007bff; z-index: 5; }
-.editor-grid input { width: 100%; height: 100%; border: none; padding: 5px; outline: none; }
+.hsi-table { width: 100%; border-collapse: collapse; }
+.hsi-table th { background: #5a5a5a; color: white; padding: 10px; }
+.hsi-table td { background: #f7f7e8; color: #333; padding: 10px; border-bottom: 1px solid #ddd; }
