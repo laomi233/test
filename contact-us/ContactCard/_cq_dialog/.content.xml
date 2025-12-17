@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root xmlns:sling="http://sling.apache.org/jcr/sling/1.0"
+          xmlns:jcr="http://www.jcp.org/jcr/1.0"
+          xmlns:nt="http://www.jcp.org/jcr/nt/1.0"
+          jcr:primaryType="nt:unstructured"
+          jcr:title="Contact Card"
+          sling:resourceType="cq/gui/components/authoring/dialog">
+    <content jcr:primaryType="nt:unstructured" sling:resourceType="granite/ui/components/coral/foundation/container">
+        <items jcr:primaryType="nt:unstructured">
+            <tabs jcr:primaryType="nt:unstructured" sling:resourceType="granite/ui/components/coral/foundation/tabs" maximized="{Boolean}true">
+                <items jcr:primaryType="nt:unstructured">
+                    <content jcr:primaryType="nt:unstructured" jcr:title="Content" sling:resourceType="granite/ui/components/coral/foundation/container">
+                        <items jcr:primaryType="nt:unstructured">
+                            <image jcr:primaryType="nt:unstructured" sling:resourceType="cq/gui/components/authoring/dialog/fileupload"
+                                   name="./fileReference" fieldLabel="Icon" mimeTypes="[image]" allowUpload="{Boolean}false"/>
+                            <title jcr:primaryType="nt:unstructured" sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                                   name="./title" fieldLabel="Title"/>
+                            <text jcr:primaryType="nt:unstructured" sling:resourceType="cq/gui/components/authoring/dialog/richtext"
+                                  name="./text" fieldLabel="Description"/>
+                        </items>
+                    </content>
+                    <layout jcr:primaryType="nt:unstructured" jcr:title="Layout" sling:resourceType="granite/ui/components/coral/foundation/container">
+                        <items jcr:primaryType="nt:unstructured">
+                            <width jcr:primaryType="nt:unstructured" sling:resourceType="granite/ui/components/coral/foundation/form/numberfield"
+                                   name="./widthPercentage" fieldLabel="Width (% of parent)" min="10" max="100" defaultValue="30"/>
+                            
+                            <lines jcr:primaryType="nt:unstructured" sling:resourceType="granite/ui/components/coral/foundation/form/numberfield"
+                                   name="./numberOfLines" fieldLabel="Height (Number of Lines)" 
+                                   fieldDescription="Height is calculated as: Lines * 1.5em"
+                                   min="1" defaultValue="6"/>
+                        </items>
+                    </layout>
+                </items>
+            </tabs>
+        </items>
+    </content>
+</jcr:root>

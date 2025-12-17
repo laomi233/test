@@ -17,7 +17,7 @@ const ContactModal = (props) => {
     const [isOpen, setIsOpen] = useState(false);
     const isInEditor = AuthoringUtils.isInEditor();
 
-    // 防止背景滚动 (仅在非编辑模式，或者编辑模式打开时)
+    // 锁定背景滚动
     useEffect(() => {
         if (isOpen) {
             document.body.style.overflow = 'hidden';
@@ -29,18 +29,17 @@ const ContactModal = (props) => {
 
     // --- Modal 渲染逻辑 ---
     const renderModal = () => {
-        // 如果关闭且不在编辑器中，不渲染
-        // 注意：在编辑器中，如果 isOpen 为 false，我们也不渲染，通过辅助按钮打开
         if (!isOpen) return null;
 
         const modalContent = (
             <div 
                 className="hsi-modal-overlay" 
-                // [关键修复] 编辑模式下，禁止点击遮罩层关闭 Modal，防止拖拽时误关
+                // [关键] 编辑模式下，禁止点击背景关闭，防止拖拽组件时误触背景导致弹窗消失
                 onClick={() => !isInEditor && setIsOpen(false)}
             >
                 <div 
                     className="hsi-modal-content" 
+                    // 阻止冒泡
                     onClick={e => e.stopPropagation()}
                 >
                     <div className="hsi-modal-header">
@@ -49,7 +48,7 @@ const ContactModal = (props) => {
                     </div>
                     
                     <div className="hsi-modal-body">
-                        {/* AEM 容器区域：允许拖拽其他组件 */}
+                        {/* 允许拖拽其他组件进入 Modal */}
                         <ResponsiveGrid
                             pagePath={pagePath}
                             itemPath={`${itemPath}/container`} 
@@ -61,7 +60,7 @@ const ContactModal = (props) => {
             </div>
         );
 
-        // 使用 Portal 挂载到 body，避免 z-index 和 transform 问题
+        // [关键] 使用 Portal 挂载到 body，避免被 AEM Wrapper 影响位置
         return ReactDOM.createPortal(modalContent, document.body);
     };
 
@@ -70,16 +69,14 @@ const ContactModal = (props) => {
         <div 
             className={`${className} contact-modal-wrapper`} 
             data-cq-data-path={cqPath}
-            // [关键修复] 显式重置高度，防止 Author 无限增长
+            // [关键修复] 强制重置高度，防止 Author 无限增长
             style={{ height: 'auto', minHeight: '50px' }}
         >
-            {/* 1. 正常用户的按钮 */}
+            {/* 1. 正常按钮 */}
             <button 
                 className="contact-trigger-btn" 
                 onClick={(e) => {
                     e.preventDefault();
-                    // 在编辑模式下，有时候点击会被 AEM 拦截用于“选中组件”
-                    // 所以我们下面加了一个辅助链接
                     setIsOpen(true); 
                 }}
             >
@@ -87,7 +84,7 @@ const ContactModal = (props) => {
             </button>
 
             {/* 2. [关键修复] Author Mode 专用辅助开关 */}
-            {/* 这允许作者在不切换到 Preview 模式的情况下，直接点开 Modal 进行编辑 */}
+            {/* 这解决了 "Preview 切回 Edit 点击按钮无效" 的问题 */}
             { isInEditor && !isOpen && (
                 <div className="author-helper-text">
                     <span 
@@ -96,7 +93,7 @@ const ContactModal = (props) => {
                             setIsOpen(true);
                         }}
                     >
-                        ⚙️ Click here to Edit Modal Content
+                        ⚙️ Edit Modal Content
                     </span>
                 </div>
             )}

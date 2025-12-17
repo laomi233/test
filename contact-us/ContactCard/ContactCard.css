@@ -1,0 +1,40 @@
+.contact-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /* justify-content: center;  或者 flex-start 根据设计图 */
+    padding: 1.5rem; /* 使用 rem */
+    margin: 10px;
+    background-color: #fff;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border-radius: 8px;
+    box-sizing: border-box; /* 确保 padding 不撑大 height */
+    overflow: hidden; /* 超过设定行数隐藏 */
+    text-align: center;
+}
+
+.contact-card-icon img {
+    height: 3em; /* 图标高度相对字体 */
+    margin-bottom: 0.5em;
+}
+
+.contact-card-title {
+    margin: 0 0 0.5em 0;
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #333;
+}
+
+.contact-card-text {
+    width: 100%;
+    font-size: 1rem; /* 基准字体 */
+    color: #666;
+}
+
+/* 编辑模式占位符 */
+.contact-card-empty {
+    padding: 20px;
+    border: 1px dashed #ccc;
+    text-align: center;
+    width: 100%;
+}

@@ -2,7 +2,7 @@
    Publish Mode (正常样式)
    ======================== */
    .contact-modal-wrapper {
-    display: inline-block; /* 或者 block，视布局而定 */
+    display: block; 
 }
 
 .contact-trigger-btn {
@@ -32,59 +32,61 @@
 .hsi-modal-body { min-height: 50px; }
 
 
-/* =========================================
-   AEM Author Mode Fixes (编辑模式专用修复)
-   ========================================= */
+/* =================================================================
+   AEM Author Edit Mode Fixes (关键修复区域)
+   ================================================================= */
 
-/* 1. 修复 Wrapper 高度无限增加问题 */
+/* [修复 1] Wrapper 高度无限增加问题 */
+/* AEM 的 CSS Class 注入在 body 上，利用它来做作用域隔离 */
 body.cq-wcm-edit-mode .contact-modal-wrapper {
     height: auto !important;
     min-height: 50px !important;
     display: block !important;
     overflow: visible !important;
-    border: 1px dashed transparent; /* 占位符 */
 }
 
-/* 2. 辅助按钮样式 */
+/* [修复 2] 辅助按钮样式 */
 .author-helper-text {
     margin-top: 5px; font-size: 12px; color: #007bff; cursor: pointer;
     text-decoration: underline; background: rgba(255,255,255,0.8);
     padding: 2px; display: inline-block;
 }
 
-/* 3. [关键] 解决无法拖拽/编辑的问题 */
-/* 当在编辑模式下，我们降低 z-index，让 AEM 的 UI (通常 z-index ~800-1000) 能显示出来 */
+/* [修复 3] 解决“无法拖拽”的问题 (Drag & Drop Fixes) */
 
+/* 让遮罩层在编辑模式下透明化，允许鼠标穿透，这样才能把组件拖进去 */
 body.cq-wcm-edit-mode .hsi-modal-overlay {
-    /* 降低层级：必须低于 AEM 的拖拽 Overlay (约 900) */
-    z-index: 500 !important;
-    
-    /* 让背景淡一点，方便看清后面 */
-    background-color: rgba(0, 0, 0, 0.2); 
-    
-    /* [核心] 让鼠标穿透遮罩层，否则你拖组件的时候会被遮罩层挡住 */
-    pointer-events: none; 
+    pointer-events: none !important; 
+    background-color: rgba(0, 0, 0, 0.15) !important; /* 淡一点方便看 */
+    z-index: 500 !important; /* 必须低于 AEM 拖拽层 (Drag Layer) */
 }
 
+/* Modal 内容框必须恢复交互，否则不能点击里面的组件配置 */
 body.cq-wcm-edit-mode .hsi-modal-content {
-    /* 内容框必须恢复交互，否则不能点击里面的组件 */
-    pointer-events: auto;
-    
-    /* 层级略高于遮罩层，但仍需注意不要挡住 AEM Toolbar */
-    z-index: 501 !important;
-    
-    /* 加个边框提示这是编辑状态 */
-    border: 2px dashed orange; 
+    pointer-events: auto !important;
+    z-index: 501 !important; /* 略高于 Overlay */
+    border: 2px dashed #ff9900; /* 视觉提示：编辑状态 */
+    min-height: 200px; /* 撑开高度方便拖拽 */
 }
 
-/* 4. 强制显示 AEM 的 "Drag components here" 占位符 */
+/* [修复 4] 强制撑开 "Drag components here" 占位符 */
+/* 防止占位符因为高度为 0 而无法感应鼠标 */
 body.cq-wcm-edit-mode .hsi-modal-body .aem-Grid-newComponent {
     display: block !important;
+    width: 100% !important;
+    height: 60px !important;
+    background-color: #e6f7ff !important;
+    border: 1px dashed #007bff !important;
+    margin: 15px 0 !important;
+    position: relative !important;
+    z-index: 502 !important;
+}
+
+/* [修复 5] 确保 ResponsiveGrid 可见 */
+body.cq-wcm-edit-mode .hsi-modal-body .aem-Grid {
+    display: block;
+    min-height: 50px;
     width: 100%;
-    height: 50px;
-    background-color: #f0f0f0;
-    border: 1px dashed #ccc;
-    margin-top: 10px;
 }
 
 @keyframes fadeIn { to { opacity: 1; } }
