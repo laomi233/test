@@ -1,0 +1,41 @@
+from playwright.sync_api import sync_playwright
+
+def crawl_authenticated_pages():
+    with sync_playwright() as p:
+        # 1. 启动浏览器
+        browser = p.chromium.launch(headless=False) # 设为 False 可以看到登录过程
+        context = browser.new_context()
+        page = context.new_page()
+
+        # 2. 执行登录
+        page.goto("https://www.example.com/login")
+        page.fill("input[name='username']", "my_username")
+        page.fill("input[name='password']", "my_password")
+        page.click("button[type='submit']")
+        
+        # 等待登录成功（比如检测某个只有登录后才有的元素）
+        page.wait_for_selector("#dashboard-content")
+        print("登录成功！")
+
+        # 3. 定义要检测的 URL 列表 (或编写逻辑自动发现链接)
+        internal_urls = [
+            "https://www.example.com/dashboard",
+            "https://www.example.com/profile",
+            "https://www.example.com/settings"
+        ]
+
+        # 4. 遍历内部页面并监听第三方请求
+        for url in internal_urls:
+            print(f"正在扫描: {url}")
+            # 监听请求
+            page.on("request", lambda req: check_third_party(req.url))
+            page.goto(url)
+            page.wait_for_load_state("networkidle")
+        
+        browser.close()
+
+def check_third_party(url):
+    if "example.com" not in url:
+        print(f"发现第三方请求: {url}")
+
+crawl_authenticated_pages()
