@@ -7,7 +7,7 @@
         afterinsert="REFRESH_PARENT"
         aftermove="REFRESH_PARENT"/>
     <cq:actionConfigs jcr:primaryType="nt:unstructured">
-        <text jcr:primaryType="nt:unstructured" text="Contact Modal Container"/>
+        <text jcr:primaryType="nt:unstructured" text="Contact Modal"/>
         <edit jcr:primaryType="nt:unstructured" handler="CQ.wcm.edit.EditBase.edit"/>
         <delete jcr:primaryType="nt:unstructured" handler="CQ.wcm.edit.EditBase.delete"/>
         <insert jcr:primaryType="nt:unstructured" handler="CQ.wcm.edit.EditBase.insert"/>
