@@ -1,275 +1,139 @@
-// DynamicTable.js
 import React, { useState, useEffect } from 'react';
-import { MapTo, withModel } from '@adobe/aem-react-editable-components';
-import './DynamicTable.css';
+import { MapTo } from '@adobe/aem-react-editable-components';
+import { ResponsiveGrid } from '@adobe/aem-react-editable-components';
+import './SpaDynamicTable.css';
 
-const DynamicTableConfig = {
-  emptyLabel: 'Dynamic Table',
-  isEmpty: function(props) {
-    return !props || !props.rows || props.rows.length === 0;
-  },
-  resourceType: 'myproject/components/dynamictable'
-};
+const SpaDynamicTable = (props) => {
+    const {
+        tableHeaders = [],
+        tableCaption,
+        rows = [],       // 来自 Sling Model 的初始行数据
+        pagePath,
+        itemPath,        // 当前组件的 JCR 路径
+        isInEditor       // 是否在 AEM 编辑器模式
+    } = props;
 
-const DynamicTable = (props) => {
-  const { rows: initialRows = [[{ content: '' }]], isInEditor } = props;
-  const [rows, setRows] = useState(initialRows);
+    // 本地状态，用于实现 UI 的即时响应 (Optimistic Update)
+    const [localRows, setLocalRows] = useState(rows);
 
-  useEffect(() => {
-    if (initialRows && initialRows.length > 0) {
-      setRows(initialRows);
+    // 当 Props 更新时（例如 Dialog 修改后），同步本地状态
+    useEffect(() => {
+        setLocalRows(rows);
+    }, [rows]);
+
+    /**
+     * 添加新行
+     * 逻辑：通过 POST 请求在 JCR 中创建实际节点
+     */
+    const handleAddRow = async () => {
+        // 计算下一行的索引
+        const nextRowIndex = localRows.length;
+        // 假设每次添加行，默认生成的列数与表头数量一致，如果没表头默认 2 列
+        const colCount = tableHeaders.length > 0 ? tableHeaders.length : 2;
+        
+        const formData = new FormData();
+        
+        // 构建 JCR 节点结构请求
+        // 目标结构: .../rows/item{N}/cols/item{M}
+        for (let i = 0; i < colCount; i++) {
+            // 关键点：指定 resourceType 为容器组件 (wcm/foundation/components/responsivegrid)
+            // 这样 AEM 才知道这个节点是可以放东西的容器
+            const relativePath = `rows/item${nextRowIndex}/cols/item${i}`;
+            formData.append(`${relativePath}/sling:resourceType`, 'wcm/foundation/components/responsivegrid');
+            formData.append(`${relativePath}/jcr:title`, `Cell ${i}`); // 可选
+        }
+
+        try {
+            // 发送请求到当前组件路径
+            await fetch(`${itemPath}.html`, {
+                method: 'POST',
+                body: formData
+            });
+
+            // 更新本地状态，以便 React 立即渲染出新的格子
+            // 模拟后端返回的数据结构
+            const newRowMock = {
+                cols: Array.from({ length: colCount }).map((_, idx) => ({ name: `item${idx}` }))
+            };
+            setLocalRows([...localRows, newRowMock]);
+
+        } catch (error) {
+            console.error("Error creating row nodes:", error);
+        }
+    };
+
+    // 空状态处理
+    if (isInEditor && localRows.length === 0 && tableHeaders.length === 0) {
+        return (
+            <div className="spa-table-placeholder">
+                <p>Dynamic Table: Please configure headers in dialog or add a row.</p>
+                <button onClick={handleAddRow}>Initialize Table</button>
+            </div>
+        );
     }
-  }, [initialRows]);
 
-  // 添加行
-  const addRow = () => {
-    const newRow = Array(rows[0]?.length || 1).fill(null).map(() => ({ content: '' }));
-    setRows([...rows, newRow]);
-  };
-
-  // 删除行
-  const deleteRow = (rowIndex) => {
-    if (rows.length > 1) {
-      setRows(rows.filter((_, i) => i !== rowIndex));
-    }
-  };
-
-  // 添加列
-  const addColumn = () => {
-    setRows(rows.map(row => [...row, { content: '' }]));
-  };
-
-  // 删除列
-  const deleteColumn = (colIndex) => {
-    if (rows[0]?.length > 1) {
-      setRows(rows.map(row => row.filter((_, i) => i !== colIndex)));
-    }
-  };
-
-  // 更新单元格内容
-  const updateCell = (rowIndex, colIndex, content) => {
-    const newRows = [...rows];
-    newRows[rowIndex][colIndex] = { content };
-    setRows(newRows);
-  };
-
-  // 富文本编辑器配置
-  const renderEditableCell = (cell, rowIndex, colIndex) => {
     return (
-      <td key={`${rowIndex}-${colIndex}`} className="editable-cell">
-        <div
-          contentEditable={isInEditor}
-          suppressContentEditableWarning
-          dangerouslySetInnerHTML={{ __html: cell.content || '' }}
-          onBlur={(e) => {
-            if (isInEditor) {
-              updateCell(rowIndex, colIndex, e.target.innerHTML);
-            }
-          }}
-          className={`cell-content ${isInEditor ? 'editing' : ''}`}
-        />
-      </td>
-    );
-  };
-
-  // 渲染只读单元格(预览模式)
-  const renderReadOnlyCell = (cell, rowIndex, colIndex) => {
-    return (
-      <td key={`${rowIndex}-${colIndex}`} className="readonly-cell">
-        <div
-          dangerouslySetInnerHTML={{ __html: cell.content || '' }}
-          className="cell-content"
-        />
-      </td>
-    );
-  };
-
-  return (
-    <div className="dynamic-table-wrapper">
-      <div className="table-container">
-        <table className="dynamic-table">
-          <tbody>
-            {rows.map((row, rowIndex) => (
-              <tr key={rowIndex}>
-                {row.map((cell, colIndex) => 
-                  isInEditor 
-                    ? renderEditableCell(cell, rowIndex, colIndex)
-                    : renderReadOnlyCell(cell, rowIndex, colIndex)
-                )}
-                {!isInEditor && (
-                  <td className="action-cell">
-                    <button 
-                      onClick={() => deleteRow(rowIndex)}
-                      className="btn-delete"
-                      title="删除行"
-                    >
-                      ✕
-                    </button>
-                  </td>
-                )}
-              </tr>
-            ))}
-            {!isInEditor && (
-              <tr className="column-actions">
-                {rows[0]?.map((_, colIndex) => (
-                  <td key={colIndex}>
-                    <button
-                      onClick={() => deleteColumn(colIndex)}
-                      className="btn-delete-col"
-                      title="删除列"
-                    >
-                      ✕
-                    </button>
-                  </td>
-                ))}
-              </tr>
+        <div className="spa-dynamic-table-wrapper">
+            {isInEditor && (
+                <div className="spa-table-toolbar">
+                    <button className="btn-add-row" onClick={handleAddRow}>+ Add Row</button>
+                </div>
             )}
-          </tbody>
-        </table>
-      </div>
 
-      {!isInEditor && (
-        <div className="table-controls">
-          <button onClick={addRow} className="btn-add">
-            + 添加行
-          </button>
-          <button onClick={addColumn} className="btn-add">
-            + 添加列
-          </button>
-        </div>
-      )}
+            <table className="spa-dynamic-table">
+                {tableCaption && <caption>{tableCaption}</caption>}
+                
+                {/* 渲染表头 */}
+                {tableHeaders.length > 0 && (
+                    <thead>
+                        <tr>
+                            {tableHeaders.map((header, index) => (
+                                <th key={index}>{header}</th>
+                            ))}
+                        </tr>
+                    </thead>
+                )}
 
-      {isInEditor && (
-        <div className="editor-hint">
-          <p>编辑模式：点击单元格进行富文本编辑</p>
+                {/* 渲染数据行 */}
+                <tbody>
+                    {localRows.map((row, rowIndex) => {
+                        // 处理后端数据可能为 Map 或 Array 的情况
+                        // 假设后端结构是 row -> cols (ChildResource)
+                        // 这里我们需要获取 cols 下的子节点列表
+                        const rawCols = row.cols || row; 
+                        const colsArray = Array.isArray(rawCols) 
+                            ? rawCols 
+                            : Object.values(rawCols || {});
+
+                        return (
+                            <tr key={rowIndex}>
+                                {colsArray.map((col, colIndex) => {
+                                    // [核心] 构建单元格的绝对路径
+                                    // 必须与 handleAddRow 中创建的路径一致
+                                    const cellPath = `${itemPath}/rows/item${rowIndex}/cols/item${colIndex}`;
+
+                                    return (
+                                        <td key={colIndex} className="spa-table-cell">
+                                            {/* 每个 TD 内部是一个 ResponsiveGrid
+                                                这使得该单元格成为一个 DropZone
+                                            */}
+                                            <ResponsiveGrid
+                                                pagePath={pagePath}
+                                                itemPath={cellPath}
+                                                // 禁用默认的 Grid 类，防止破坏 TD 布局
+                                                gridClass="spa-cell-grid"
+                                                columnClass="spa-cell-col"
+                                            />
+                                        </td>
+                                    );
+                                })}
+                            </tr>
+                        );
+                    })}
+                </tbody>
+            </table>
         </div>
-      )}
-    </div>
-  );
+    );
 };
 
-export default MapTo(DynamicTableConfig.resourceType)(
-  withModel(DynamicTable)
-);
-
-// DynamicTable.css
-/* 
-.dynamic-table-wrapper {
-  padding: 20px;
-  font-family: Arial, sans-serif;
-}
-
-.table-container {
-  overflow-x: auto;
-  margin-bottom: 20px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-}
-
-.dynamic-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: white;
-}
-
-.dynamic-table td {
-  border: 1px solid #ddd;
-  padding: 12px;
-  min-width: 150px;
-  position: relative;
-}
-
-.editable-cell {
-  background-color: #f9f9f9;
-}
-
-.editable-cell:hover {
-  background-color: #f0f0f0;
-}
-
-.cell-content {
-  min-height: 20px;
-  outline: none;
-}
-
-.cell-content.editing {
-  cursor: text;
-  padding: 4px;
-  border-radius: 3px;
-}
-
-.cell-content.editing:focus {
-  background-color: white;
-  box-shadow: 0 0 0 2px #0066cc;
-}
-
-.action-cell {
-  width: 50px;
-  text-align: center;
-  background-color: #fafafa;
-  border-left: 2px solid #ddd;
-}
-
-.column-actions td {
-  padding: 8px;
-  text-align: center;
-  background-color: #fafafa;
-  border-top: 2px solid #ddd;
-}
-
-.btn-delete,
-.btn-delete-col {
-  background-color: #dc3545;
-  color: white;
-  border: none;
-  padding: 6px 10px;
-  border-radius: 3px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background-color 0.2s;
-}
-
-.btn-delete:hover,
-.btn-delete-col:hover {
-  background-color: #c82333;
-}
-
-.table-controls {
-  display: flex;
-  gap: 10px;
-  margin-top: 15px;
-}
-
-.btn-add {
-  background-color: #28a745;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background-color 0.2s;
-}
-
-.btn-add:hover {
-  background-color: #218838;
-}
-
-.editor-hint {
-  margin-top: 15px;
-  padding: 10px;
-  background-color: #e7f3ff;
-  border-left: 4px solid #0066cc;
-  border-radius: 3px;
-}
-
-.editor-hint p {
-  margin: 0;
-  color: #004085;
-  font-size: 14px;
-}
-
-.readonly-cell {
-  background-color: white;
-}
-*/
+export default MapTo('my-project/components/spa-dynamic-table')(SpaDynamicTable);

@@ -1,0 +1,47 @@
+.spa-dynamic-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+}
+
+.spa-dynamic-table th, 
+.spa-dynamic-table td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    vertical-align: top;
+}
+
+.spa-table-cell {
+    min-width: 100px; /* 保证空单元格也有宽度可点击 */
+    min-height: 50px;
+}
+
+/* 覆盖 ResponsiveGrid 默认样式 (关键) */
+.spa-cell-grid {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+}
+
+.spa-cell-col {
+    display: block !important;
+    width: 100% !important;
+    padding: 0 !important;
+    float: none !important;
+    max-width: none !important;
+}
+
+/* 隐藏 AEM Grid 的 clearfix */
+.spa-cell-grid:before,
+.spa-cell-grid:after {
+    display: none !important;
+}
+
+/* 增加一点视觉提示，让作者知道这里可以拖拽 */
+.spa-table-cell .cq-Editable-dom {
+    border: 1px dashed transparent;
+    transition: border 0.2s;
+}
+.spa-table-cell:hover .cq-Editable-dom {
+    border-color: #e1e1e1;
+}

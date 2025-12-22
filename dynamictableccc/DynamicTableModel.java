@@ -1,4 +1,3 @@
-// DynamicTableModel.java
 package com.myproject.core.models;
 
 import com.adobe.cq.export.json.ComponentExporter;
@@ -11,82 +10,46 @@ import org.apache.sling.models.annotations.Model;
 import org.apache.sling.models.annotations.injectorspecific.ChildResource;
 import org.apache.sling.models.annotations.injectorspecific.ValueMapValue;
 
-import javax.annotation.PostConstruct;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @Model(
-    adaptables = {SlingHttpServletRequest.class, Resource.class},
-    adapters = {DynamicTableModel.class, ComponentExporter.class},
-    resourceType = DynamicTableModel.RESOURCE_TYPE,
+    adaptables = SlingHttpServletRequest.class,
+    adapters = {SpaDynamicTable.class, ComponentExporter.class},
+    resourceType = SpaDynamicTable.RESOURCE_TYPE,
     defaultInjectionStrategy = DefaultInjectionStrategy.OPTIONAL
 )
-@Exporter(
-    name = ExporterConstants.SLING_MODEL_EXPORTER_NAME,
-    extensions = ExporterConstants.SLING_MODEL_EXTENSION
-)
-public class DynamicTableModel implements ComponentExporter {
+@Exporter(name = ExporterConstants.SLING_MODEL_EXPORTER_NAME, extensions = ExporterConstants.SLING_MODEL_EXTENSION)
+public class SpaDynamicTable implements ComponentExporter {
 
-    public static final String RESOURCE_TYPE = "myproject/components/dynamictable";
+    static final String RESOURCE_TYPE = "my-project/components/spa-dynamic-table";
 
-    @ChildResource
+    // 1. Dialog 配置的属性
+    @ValueMapValue
+    private String tableCaption;
+
+    @ValueMapValue
+    private List<String> tableHeaders;
+
+    // 2. 动态生成的子节点 (用于确定有多少行)
+    // 结构预期: 当前节点 -> rows -> item0, item1...
+    @ChildResource(name = "rows")
     private List<Resource> rows;
 
-    private List<List<CellData>> tableData;
-
-    @PostConstruct
-    protected void init() {
-        tableData = new ArrayList<>();
-        
-        if (rows != null) {
-            for (Resource rowResource : rows) {
-                List<CellData> rowData = new ArrayList<>();
-                Iterable<Resource> cells = rowResource.getChildren();
-                
-                for (Resource cellResource : cells) {
-                    CellData cell = new CellData();
-                    cell.setContent(cellResource.getValueMap().get("content", String.class));
-                    rowData.add(cell);
-                }
-                
-                if (!rowData.isEmpty()) {
-                    tableData.add(rowData);
-                }
-            }
-        }
-        
-        // 如果没有数据,创建默认的3x3表格
-        if (tableData.isEmpty()) {
-            for (int i = 0; i < 3; i++) {
-                List<CellData> row = new ArrayList<>();
-                for (int j = 0; j < 3; j++) {
-                    CellData cell = new CellData();
-                    cell.setContent("");
-                    row.add(cell);
-                }
-                tableData.add(row);
-            }
-        }
+    public String getTableCaption() {
+        return tableCaption;
     }
 
-    public List<List<CellData>> getRows() {
-        return tableData;
+    public List<String> getTableHeaders() {
+        return tableHeaders != null ? tableHeaders : Collections.emptyList();
+    }
+
+    public List<Resource> getRows() {
+        return rows != null ? rows : Collections.emptyList();
     }
 
     @Override
     public String getExportedType() {
         return RESOURCE_TYPE;
-    }
-
-    public static class CellData {
-        private String content;
-
-        public String getContent() {
-            return content;
-        }
-
-        public void setContent(String content) {
-            this.content = content;
-        }
     }
 }
