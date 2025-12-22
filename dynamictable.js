@@ -5,8 +5,17 @@ import { Text } from "@adobe/aem-core-components-react-spa";
 
 // 定义你的表格组件
 const DynamicTable = (props) => {
+    const tableData = props.tableData || [];
+    
+    // AEM 编辑器检查：如果是在编辑模式且没数据，显示占位符
+    const isEmpty = tableData.length === 0;
+    
+    // 获取 isInEditor 状态 (通常通过 props 或 context 获取)
+    // 简单判断：如果 props.isInEditor 存在
+    if (isEmpty && props.isInEditor) {
+         return <div className="empty-table-placeholder">Empty Table: Click to configure</div>;
+    }
     const { 
-        tableData, // 从 Model 传来的数据
         pagePath,  // 当前页面路径
         itemPath   // 当前组件路径
     } = props;
