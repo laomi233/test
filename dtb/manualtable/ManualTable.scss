@@ -72,3 +72,26 @@
       }
     }
   }
+
+
+  /* AEM RTE Styles 支持 */
+.manual-table-component table td {
+  
+    /* 这些类名必须和 AEM Dialog 里配置的 cssName 一致 */
+    .text-highlight {
+      color: red;
+      font-weight: bold;
+    }
+  
+    .text-large {
+      font-size: 1.2em;
+    }
+    
+    .badge-warning {
+      background-color: #ffc107;
+      color: #000;
+      padding: 2px 5px;
+      border-radius: 4px;
+      font-size: 0.9em;
+    }
+  }

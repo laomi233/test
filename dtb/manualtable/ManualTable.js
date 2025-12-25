@@ -2,7 +2,34 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { MapTo } from '@adobe/aem-react-editable-components';
 import debounce from 'lodash/debounce';
 import './ManualTable.scss';
-
+const applyStyleToSelection = (className) => {
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return;
+  
+    const range = selection.getRangeAt(0);
+    const selectedText = range.toString();
+  
+    // 如果没有选中文本，不操作
+    if (!selectedText) return;
+  
+    // 创建一个 span 标签
+    const span = document.createElement('span');
+    span.className = className;
+    
+    // 简单的处理逻辑：包裹内容
+    // 注意：contentEditable 中如果跨越了标签（例如选了一半 bold 一半 normal），surroundContents 会报错
+    // 生产环境通常需要复杂的 DOM 遍历，这里用 try-catch 做基础保护
+    try {
+      range.surroundContents(span);
+    } catch (e) {
+      console.warn("无法应用样式：选区可能跨越了多个节点。请尝试只选中纯文本。", e);
+      // 降级方案：document.execCommand 不支持 class，所以这里只能提示用户
+      alert("请选中一段连续的文本来应用样式");
+    }
+    
+    // 清除选择，避免视觉干扰
+    selection.removeAllRanges();
+  };
 // -------------------------------------------------------------------------
 // 单元格组件 (支持富文本 + 选中状态)
 // -------------------------------------------------------------------------
@@ -38,7 +65,24 @@ const EditableCell = ({ html, style, width, onContentChange, onFocus, isSelected
 // -------------------------------------------------------------------------
 const ManualTable = (props) => {
   const { cqPath, tableData } = props;
-
+// -----------------------------------------------------------------------
+  // 处理样式下拉框变化
+  // -----------------------------------------------------------------------
+  const handleStyleChange = (e) => {
+    const className = e.target.value;
+    if (!className) return;
+    
+    // 应用样式
+    applyStyleToSelection(className);
+    
+    // 重要：样式改变本质上修改了 DOM (innerHTML)，
+    // 我们需要手动触发一次 cell 的更新逻辑，把新的 HTML 同步回 React State
+    // 在这里我们假设 onInput 会捕获到变化，或者你可以手动触发一次 update
+    // 由于 contentEditable 的特性，只要 DOM 变了，下次 focus/input 就会同步
+    
+    // 重置 select
+    e.target.value = "";
+  };
   // 1. 初始化 State (尝试解析 AEM 存的 JSON，失败则用默认)
   const [data, setData] = useState(() => {
     try {
@@ -201,9 +245,16 @@ const ManualTable = (props) => {
     <div className="manual-table-component">
       {/* 工具栏 */}
       <div className="toolbar">
-        <div className="group">
-          <button onMouseDown={(e) => {e.preventDefault(); execCmd('bold');}}><b>B</b></button>
-          <button onMouseDown={(e) => {e.preventDefault(); execCmd('italic');}}><i>I</i></button>
+      <div className="group">
+           <span style={{fontSize: '12px', marginRight: '5px'}}>Style:</span>
+           <select onChange={handleStyleChange} disabled={allowedStyles.length === 0}>
+             <option value="">-- Select Style --</option>
+             {allowedStyles.map((style, index) => (
+               <option key={index} value={style.value}>
+                 {style.label}
+               </option>
+             ))}
+           </select>
         </div>
         <div className="group">
           <button onClick={addRow}>+ Row</button>
