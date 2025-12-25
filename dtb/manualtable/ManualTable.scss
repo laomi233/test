@@ -1,0 +1,74 @@
+.manual-table-component {
+    border: 1px solid #ccc;
+    padding: 10px;
+    background: white;
+  
+    .toolbar {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 10px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #eee;
+  
+      button {
+        padding: 4px 8px;
+        margin-right: 2px;
+        cursor: pointer;
+        border: 1px solid #ddd;
+        background: #f9f9f9;
+  
+        &:disabled { opacity: 0.5; }
+        &:hover:not(:disabled) { background: #e9e9e9; }
+      }
+    }
+  
+    .table-wrapper {
+      position: relative; /* 为 resize-overlay 提供定位上下文 */
+      overflow-x: auto;
+  
+      table {
+        border-collapse: collapse;
+        table-layout: fixed; /* 关键：固定布局才能精确控制列宽 */
+        width: max-content; /* 让表格宽度根据列宽总和撑开 */
+  
+        td {
+          border: 1px solid #ccc;
+          padding: 5px;
+          vertical-align: top;
+          position: relative;
+          
+          &.selected {
+            border: 2px solid #2196F3; /* 选中高亮 */
+          }
+  
+          .cell-content {
+            outline: none;
+            min-height: 20px;
+          }
+        }
+      }
+  
+      /* 拖拽手柄层 */
+      .resize-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        pointer-events: none; /* 让鼠标事件穿透到表格，除了 resizer */
+  
+        .resizer {
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          width: 6px;
+          cursor: col-resize;
+          pointer-events: auto; /* 恢复 resizer 的鼠标事件 */
+          z-index: 10;
+          
+          &:hover {
+            background-color: rgba(33, 150, 243, 0.5);
+          }
+        }
+      }
+    }
+  }
