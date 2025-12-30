@@ -1,0 +1,73 @@
+在 AEM (Adobe Experience Manager) React SPA 中实现自定义 404 页面处理，通常比纯 React 应用稍微复杂一些，因为它涉及到 AEM 的内容结构（Content Tree） 和 SPA 路由（Client-side Routing） 的交互。你需要处理两种情况：站内跳转（Client-side）：用户在 SPA 内部点击了一个不存在的链接。直接访问/刷新（Server-side/Initial Load）：用户直接在浏览器地址栏输入了一个错误的 URL，导致 AEM 的 Model JSON 请求返回 404。以下是实现这一功能的完整步骤和最佳实践：第一步：在 AEM 中创建一个真实的 404 页面为了让 404 页面也可以被业务人员（Authors）编辑，最好的做法是在 AEM 中创建一个实际的页面。在 AEM Site 结构下（例如 /content/mysite/us/en/errors/404）创建一个页面。在这个页面上拖拽组件，设计好你的 404 提示信息。记住这个路径，比如 /content/mysite/us/en/errors/404.html。第二步：配置 React Router (前端路由拦截)这是为了处理用户在 SPA 内部点击跳转产生的 404。你需要利用 React Router 的 Switch (v5) 或 Routes (v6) 的匹配机制，将未匹配的路由重定向到你在第一步创建的 404 页面路径。假设你使用的是 AEM Project Archetype 生成的项目（通常包含 App.js）：代码示例 (基于 React Router v5):JavaScriptimport { Route, Switch, Redirect } from 'react-router-dom';
+import { AemPage } from '@adobe/aem-react-editable-components';
+
+// ... 其他 import
+
+class App extends Page {
+  render() {
+    return (
+      <div>
+        <Switch>
+            {/* 这里的 AemPage 负责渲染正常的 AEM 页面 */}
+            <Route path="/content/mysite/us/en/home" component={AemPage} />
+            
+            {/* 处理根路径和其他具体路径 */}
+            <Route exact path="/" render={() => <Redirect to="/content/mysite/us/en/home.html"/>} />
+
+            {/* --- 核心代码 --- */}
+            {/* 如果上面的路径都不匹配，这是 Catch-all 路由 */}
+            {/* 方案 A: 直接渲染一个 React 组件 (不推荐，因为不能在 AEM 编辑) */}
+            {/* <Route path="*" component={MyCustom404Component} /> */}
+
+            {/* 方案 B: 重定向到 AEM 里的 404 页面路径 */}
+            <Route path="*" render={() => (
+                <Redirect to="/content/mysite/us/en/errors/404.html" />
+            )}/>
+        </Switch>
+      </div>
+    );
+  }
+}
+注意：由于 AEM SPA Editor 需要能够动态解析路由，通常 AEM 的 SPA 框架会自动处理大部分路由映射。你需要确保你的 * (Catch-all) 路由放在路由列表的最后。第三步：处理 Model JSON 加载失败 (初始加载拦截)当用户直接刷新一个不存在的 URL 时，SPA 会尝试调用 AEM 的 ModelManager 去获取该页面的 JSON 数据。如果页面不存在，AEM 服务器会返回 API 404 错误。我们需要拦截这个错误并手动跳转。你需要修改入口文件（通常是 index.js 或 App.js 中的初始化逻辑）。JavaScriptimport { ModelManager } from '@adobe/aem-spa-page-model-manager';
+import { createBrowserHistory } from 'history';
+
+const history = createBrowserHistory();
+
+// 你的 404 页面路径
+const NOT_FOUND_PATH = '/content/mysite/us/en/errors/404.html';
+
+ModelManager.initialize().then((pageModel) => {
+    // 初始化成功，渲染 App
+    render(
+        <Router history={history}>
+            <App history={history} cqChildren={pageModel[Constants.CHILDREN_PROP]} ... />
+        </Router>,
+        document.getElementById('spa-root')
+    );
+}).catch((error) => {
+    // --- 核心代码 ---
+    // 捕获初始化错误 (例如 Model JSON 404)
+    console.error('Error initializing ModelManager, redirecting to 404', error);
+    
+    // 如果当前的 URL 已经是 404 页面，避免死循环
+    if (window.location.pathname !== NOT_FOUND_PATH) {
+        window.location.href = NOT_FOUND_PATH;
+    }
+});
+更优雅的做法（拦截器模式）：如果你想在用户导航过程中也拦截 API 错误，可以自定义 ModelClient：JavaScriptimport { ModelManager, ModelClient } from '@adobe/aem-spa-page-model-manager';
+
+class CustomModelClient extends ModelClient {
+    fetch(modelPath) {
+        return super.fetch(modelPath).catch((err) => {
+            // 这里捕获所有 fetch JSON 的错误
+            if (err.response && err.response.status === 404) {
+                 window.location.href = '/content/mysite/us/en/errors/404.html';
+            }
+            throw err;
+        });
+    }
+}
+
+// 初始化时注入自定义 Client
+ModelManager.initialize({ modelClient: new CustomModelClient() }).then(...)
+第四步：配置服务器端 (Sling Error Pages) - 可选但推荐为了确保 SEO 友好和正确的 HTTP 状态码，最好也在 AEM (Sling) 层面做一个兜底。在你的站点根节点（例如 /content/mysite/us/en）的 jcr:content 节点上。添加属性 sling:errorPages。值设置为你的错误页面父文件夹路径（例如 /content/mysite/us/en/errors）。确保该文件夹下有一个名为 404 的页面。为什么需要这一步？如果是纯 AEM 渲染（非 SPA 模式的部分）或者 SPA 尚未加载前的极早阶段出错，这个配置会让 AEM 服务器直接负责寻找 404 内容。总结方案表场景处理方式关键技术点路由不匹配 (Route Mismatch)React Router * 路径<Route path="*" /> 重定向到 404 路径数据不存在 (Model JSON 404)ModelManager 错误捕获catch block 或 CustomModelClient服务器直出 (Server Fallback)sling:errorPagesJCR 属性配置建议最推荐的做法是组合拳：在 AEM 创建 /errors/404 页面（允许编辑）。React Router 配置 * 重定向到该页面。配置 CustomModelClient 拦截 API 的 404 响应并强制跳转。这样无论是代码逻辑错误、路由拼写错误，还是内容真的不存在，用户都会被引导至同一个可管理的 404 页面。您希望我为您提供 CustomModelClient 的完整 TypeScript/JavaScript 代码模板吗？
