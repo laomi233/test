@@ -1,0 +1,218 @@
+四、React SPA Component
+
+创建：
+
+src/components/InsightList
+
+文件：
+
+InsightList.js
+CardItem.js
+Pagination.js
+五、InsightList Component
+import React,{useEffect,useState} from "react";
+import CardItem from "./CardItem";
+import Pagination from "./Pagination";
+
+const PAGE_SIZE = 9;
+
+export default function InsightList(){
+
+ const [items,setItems] = useState([]);
+ const [page,setPage] = useState(1);
+
+ useEffect(()=>{
+
+   const offset = (page-1) * PAGE_SIZE;
+
+   fetch(`/graphql/execute.json/project/insightCards?offset=${offset}&limit=${PAGE_SIZE}`)
+     .then(res=>res.json())
+     .then(data=>{
+
+       const list = data.data.insightCardList.items;
+
+       setItems(list);
+
+     });
+
+ },[page]);
+
+ return(
+
+  <div>
+
+   <div className="insight-grid">
+
+     {items.map((item,i)=>(
+       <CardItem key={i} item={item}/>
+     ))}
+
+   </div>
+
+   <Pagination
+     page={page}
+     setPage={setPage}
+   />
+
+  </div>
+
+ );
+
+}
+六、CardItem
+export default function CardItem({item}){
+
+ return(
+
+  <div className="insight-card">
+
+    <img src={item.image?._path} />
+
+    <h3>{item.title}</h3>
+
+    <p>{item.description}</p>
+
+    <a href={item.link}>
+      Read more
+    </a>
+
+  </div>
+
+ )
+
+}
+七、Pagination
+export default function Pagination({page,setPage}){
+
+ return(
+
+  <div className="pagination">
+
+   <button
+    disabled={page===1}
+    onClick={()=>setPage(page-1)}
+   >
+    Prev
+   </button>
+
+   <span>Page {page}</span>
+
+   <button
+    onClick={()=>setPage(page+1)}
+   >
+    Next
+   </button>
+
+  </div>
+
+ )
+
+}
+八、注册 AEM SPA Component
+
+文件：
+
+src/components/import-components.js
+import { MapTo } from "@adobe/aem-react-editable-components";
+import InsightList from "./InsightList/InsightList";
+
+MapTo("project/components/insight-list")(InsightList);
+九、创建 AEM Component
+
+路径：
+
+/apps/project/components/insight-list
+
+content.xml
+
+<jcr:root
+ xmlns:sling="http://sling.apache.org/jcr/sling/1.0"
+ xmlns:jcr="http://www.jcp.org/jcr/1.0"
+ jcr:primaryType="cq:Component"
+ jcr:title="Insight List"
+ componentGroup="Project Content"/>
+十、Author 使用方式
+
+作者在 page editor：
+
+拖入 Insight List component
+
+页面会自动：
+
+GraphQL → Content Fragment → render cards
+
+作者新增卡片：
+
+Assets
+ → Content Fragment
+ → Create InsightCard
+
+网站自动出现。
+
+十一、性能
+
+这个架构支持：
+
+内容数量	表现
+100	瞬间
+500	瞬间
+1000	稳定
+5000	稳定
+
+原因：
+
+GraphQL pagination
+
+每次只加载：
+
+9条
+十二、增强功能（强烈建议）
+Filter
+
+GraphQL：
+
+filter:{
+ category:{
+   _expressions:[
+     {value:"research"}
+   ]
+ }
+}
+
+URL：
+
+?category=research
+Search
+
+GraphQL：
+
+fulltext:"inflation"
+十三、最终架构
+AEM Author
+    │
+Content Fragment
+    │
+GraphQL Persist Query
+    │
+Dispatcher Cache
+    │
+React SPA
+    │
+Card Grid
+    │
+Pagination
+十四、真实企业项目还会再加一个优化（非常重要）
+
+为了让 Author 可以排序卡片：
+
+Content Fragment 增加字段：
+
+order
+
+GraphQL：
+
+sort:"order ASC"
+
+作者可以控制：
+
+首页展示顺序

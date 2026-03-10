@@ -1,0 +1,497 @@
+如果你只需要 “Load More” 按钮而不是分页，实现会更简单，而且 用户体验更接近你给的 Insights 页面。核心思想是：
+
+初始加载 N 条
+
+点击 Load More
+
+再加载 N 条
+
+直到加载完
+
+这种方式在 AEM + React SPA + GraphQL 中非常常见。
+
+一、推荐每次加载多少个？
+
+通常设计是：
+
+设备	建议数量
+Desktop	9
+Tablet	6
+Mobile	4
+
+原因：
+
+Insights 卡片一般是：
+
+Desktop
+3 columns
+
+所以：
+
+3 × 3 = 9
+
+每次加载 3 行。
+
+很多网站都是这样设计。
+
+二、React 实现逻辑
+
+核心变量：
+
+visibleCount
+
+表示当前展示多少条。
+
+三、React 组件实现
+InsightList.js
+import React,{useEffect,useState} from "react";
+import CardItem from "./CardItem";
+
+const LOAD_COUNT = 9;
+
+const InsightList = () => {
+
+ const [items,setItems] = useState([]);
+ const [visibleCount,setVisibleCount] = useState(LOAD_COUNT);
+
+ useEffect(()=>{
+
+   fetch("/graphql/execute.json/project/insightCards?offset=0&limit=200")
+     .then(res=>res.json())
+     .then(data=>{
+
+       const list = data?.data?.insightCardList?.items || [];
+
+       setItems(list);
+
+     });
+
+ },[]);
+
+ const visibleItems = items.slice(0,visibleCount);
+
+ return(
+
+  <div className="insight-list">
+
+   <div className="insight-grid">
+
+    {visibleItems.map((item,i)=>(
+      <CardItem key={i} item={item}/>
+    ))}
+
+   </div>
+
+   {visibleCount < items.length && (
+
+     <div className="load-more">
+
+      <button
+       onClick={()=>setVisibleCount(visibleCount + LOAD_COUNT)}
+      >
+       Load More
+      </button>
+
+     </div>
+
+   )}
+
+  </div>
+
+ )
+
+}
+
+export default InsightList;
+四、Load More 按钮样式
+.load-more{
+
+ text-align:center;
+
+ margin-top:40px;
+
+}
+
+.load-more button{
+
+ padding:12px 24px;
+
+ border:1px solid #333;
+
+ background:white;
+
+ cursor:pointer;
+
+}
+五、用户体验
+
+假设：
+
+总共 50 条
+每次加载 9 条
+
+用户行为：
+
+页面打开
+↓
+显示 9 条
+↓
+点击 Load More
+↓
+显示 18 条
+↓
+点击 Load More
+↓
+显示 27 条
+
+直到：
+
+全部显示
+
+按钮自动消失。
+
+六、性能优化（推荐）
+
+如果内容很多（比如 1000+），不要一次加载全部。
+
+改成 GraphQL 分批加载：
+
+逻辑：
+
+Load More
+↓
+GraphQL next page
+↓
+append items
+
+示例代码：
+
+const LOAD_COUNT = 9;
+
+const [items,setItems] = useState([]);
+const [offset,setOffset] = useState(0);
+
+useEffect(()=>{
+
+ fetch(`/graphql/execute.json/project/insightCards?offset=${offset}&limit=${LOAD_COUNT}`)
+  .then(res=>res.json())
+  .then(data=>{
+
+   const newItems = data.data.insightCardList.items;
+
+   setItems(prev => [...prev,...newItems]);
+
+  });
+
+},[offset]);
+
+const loadMore = () => {
+
+ setOffset(offset + LOAD_COUNT);
+
+};
+七、Load More UI
+<button onClick={loadMore}>
+ Load More
+</button>
+八、最终架构
+Content Fragment
+     │
+GraphQL Persist Query
+     │
+React SPA
+     │
+Card Grid
+     │
+Load More Button
+
+优点：
+
+不需要 SEO pagination
+
+不需要 Dispatcher 改动
+
+用户体验好
+
+实现简单
+
+九、真实 Insights 页面常见设计
+
+很多金融网站：
+
+initial load = 9
+load more = 6
+
+这样用户不会加载太多内容。
+
+💡 我建议你的最终配置
+
+Initial Load = 9
+Load More = 9
+
+如果你愿意，我可以再帮你做一个 更高级的版本（Production 最优实现）：
+
+它会解决 AEM SPA 常见一个大坑：
+
+Load More 后
+AEM Author Mode 会 break
+
+我可以给你一套 兼容 AEM SPA Editor 的 Load More 组件实现。
+
+兼容 AEM SPA Editor 的 Load More 组件实现。每次load more的数目可以由用户决定
+
+明白了！你想要一个 完全兼容 AEM React SPA Editor 的 “Load More” 组件，特点：
+
+每次加载数量 可由 Author 配置
+
+可视化拖拽、编辑（SPA Editor friendly）
+
+不修改 Dispatcher
+
+支持 Content Fragment + GraphQL / Page Model JSON
+
+前端 “Load More” 动态加载
+
+我给你一个 生产可用方案，附完整代码结构。
+
+一、AEM Component 设计
+
+路径：
+
+/apps/project/components/insight-loadmore
+1. dialog.xml（允许 Author 配置）
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root
+    xmlns:sling="http://sling.apache.org/jcr/sling/1.0"
+    xmlns:cq="http://www.day.com/jcr/cq/1.0"
+    jcr:primaryType="cq:Dialog"
+    title="Insight Load More"
+    xtype="dialog"
+    height="250"
+    width="400">
+
+    <items jcr:primaryType="cq:WidgetCollection">
+
+        <folderPath
+            jcr:primaryType="cq:Widget"
+            fieldLabel="Content Fragment Folder"
+            name="./folderPath"
+            xtype="pathfield"
+            rootPath="/content/dam/project/insights"/>
+
+        <initialLoad
+            jcr:primaryType="cq:Widget"
+            fieldLabel="Initial Load Count"
+            name="./initialLoad"
+            xtype="numberfield"
+            allowDecimals="false"
+            value="9"/>
+
+        <loadMoreCount
+            jcr:primaryType="cq:Widget"
+            fieldLabel="Load More Count"
+            name="./loadMoreCount"
+            xtype="numberfield"
+            allowDecimals="false"
+            value="9"/>
+    </items>
+</jcr:root>
+二、Sling Model（可用于 React SPA JSON）
+@Model(
+  adaptables = SlingHttpServletRequest.class,
+  adapters = ComponentExporter.class,
+  resourceType = "project/components/insight-loadmore"
+)
+public class InsightLoadMoreModel implements ComponentExporter {
+
+    @Inject @Optional
+    private String folderPath;
+
+    @Inject @Optional
+    private int initialLoad = 9;
+
+    @Inject @Optional
+    private int loadMoreCount = 9;
+
+    @Inject
+    private ResourceResolver resolver;
+
+    public List<InsightItem> getItems() {
+
+        List<InsightItem> items = new ArrayList<>();
+
+        if(folderPath == null) return items;
+
+        Resource folder = resolver.getResource(folderPath);
+
+        if(folder == null) return items;
+
+        for(Resource child : folder.getChildren()) {
+
+            ValueMap vm = child.getChild("jcr:content/data/master").getValueMap();
+
+            InsightItem item = new InsightItem();
+            item.setTitle(vm.get("title", String.class));
+            item.setDescription(vm.get("description", String.class));
+            item.setLink(vm.get("link", String.class));
+            item.setImage(vm.get("image", String.class));
+            items.add(item);
+        }
+
+        return items;
+    }
+
+    public int getInitialLoad() { return initialLoad; }
+    public int getLoadMoreCount() { return loadMoreCount; }
+
+    @Override
+    public String getExportedType() {
+        return "project/components/insight-loadmore";
+    }
+}
+三、React SPA Component
+
+路径：
+
+ui.frontend/src/components/InsightLoadMore/
+
+文件：
+
+InsightLoadMore.js
+
+CardItem.js
+
+InsightLoadMore.scss
+
+index.js
+
+1️⃣ InsightLoadMore.js
+import React, {useState} from "react";
+import CardItem from "./CardItem";
+import "./InsightLoadMore.scss";
+
+const InsightLoadMore = ({cqModel}) => {
+
+ const items = cqModel.items || [];
+
+ const initialLoad = cqModel.initialLoad || 9;
+ const loadMoreCount = cqModel.loadMoreCount || 9;
+
+ const [visibleCount, setVisibleCount] = useState(initialLoad);
+
+ const visibleItems = items.slice(0, visibleCount);
+
+ const handleLoadMore = () => {
+   setVisibleCount(prev => Math.min(prev + loadMoreCount, items.length));
+ };
+
+ return (
+   <div className="insight-loadmore">
+
+     <div className="insight-grid">
+       {visibleItems.map((item,i) => (
+         <CardItem key={i} item={item} />
+       ))}
+     </div>
+
+     {visibleCount < items.length && (
+       <div className="load-more">
+         <button onClick={handleLoadMore}>
+           Load More
+         </button>
+       </div>
+     )}
+
+   </div>
+ );
+};
+
+export default InsightLoadMore;
+2️⃣ CardItem.js
+import React from "react";
+
+const CardItem = ({item}) => (
+ <div className="insight-card">
+   {item.image && <img src={item.image} alt={item.title} />}
+   <h3>{item.title}</h3>
+   <p>{item.description}</p>
+   {item.link && <a href={item.link}>Read More</a>}
+ </div>
+);
+
+export default CardItem;
+3️⃣ index.js（SPA Editor MapTo）
+import {MapTo} from "@adobe/aem-react-editable-components";
+import InsightLoadMore from "./InsightLoadMore";
+
+MapTo("project/components/insight-loadmore")(InsightLoadMore);
+
+export default InsightLoadMore;
+4️⃣ CSS / SCSS
+.insight-loadmore {
+  padding: 24px;
+
+  .insight-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill,minmax(300px,1fr));
+    gap: 24px;
+  }
+
+  .insight-card {
+    border:1px solid #ddd;
+    padding:16px;
+    background:#fff;
+
+    img {
+      width:100%;
+      height:200px;
+      object-fit:cover;
+    }
+
+    h3 {
+      margin-top:8px;
+    }
+
+    a {
+      color:#0070f3;
+      font-weight:600;
+    }
+  }
+
+  .load-more {
+    text-align:center;
+    margin-top:24px;
+
+    button {
+      padding:12px 24px;
+      border:1px solid #333;
+      cursor:pointer;
+      background:white;
+    }
+  }
+}
+四、AEM Author 使用方式
+
+Author 拖入 Insight Load More component
+
+在 Dialog 设置：
+
+Content Fragment Folder
+
+Initial Load Count
+
+Load More Count
+
+页面直接显示卡片，并可点击 Load More 加载更多
+
+五、特点
+
+完全兼容 SPA Editor，不会 break Author 编辑模式
+
+Load More 数量可配置，通过 component dialog
+
+不需要 Dispatcher 改动
+
+适合几百条内容
+
+支持未来加 Filter / Search / Tag
