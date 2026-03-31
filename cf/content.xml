@@ -1,0 +1,27 @@
+<!-- .content.xml (节选关键部分) -->
+<tabs jcr:primaryType="nt:unstructured"
+      sling:resourceType="granite/ui/components/coral/foundation/form/multifield"
+      composite="{Boolean}true"
+      fieldLabel="Tabs 配置">
+    <field jcr:primaryType="nt:unstructured"
+           sling:resourceType="granite/ui/components/coral/foundation/container"
+           name="./tabs">
+        <items jcr:primaryType="nt:unstructured">
+            <!-- Tab 的标题 -->
+            <tabTitle jcr:primaryType="nt:unstructured"
+                      sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                      fieldLabel="Tab 标题"
+                      name="./tabTitle"/>
+            
+            <!-- Tab 下的多个 CF 路径 -->
+            <cfPaths jcr:primaryType="nt:unstructured"
+                     sling:resourceType="granite/ui/components/coral/foundation/form/multifield"
+                     fieldLabel="Content Fragments 路径">
+                <field jcr:primaryType="nt:unstructured"
+                       sling:resourceType="cq/gui/components/coral/common/form/pathfield"
+                       rootPath="/content/dam"
+                       name="./cfPaths"/>
+            </cfPaths>
+        </items>
+    </field>
+</tabs>
